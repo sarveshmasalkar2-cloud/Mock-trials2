@@ -155,6 +155,7 @@ function selectWitMode(mode) {
 }
 
 function startWitnessSession() {
+    clearInterval(State.witness.interval);
     showStep('witness-room', 'wit-chat-room');
     const side = State.witness.side;
     const wit = State.witness.name;
@@ -195,8 +196,14 @@ function askWitnessNext() {
         endWitnessSession("The Examination is over.");
         return;
     }
+
+    // 1. Get the question ready
     const qObj = State.witness.bank[State.witness.qIndex];
-    appendMessage('bot', qObj.q, 'wit-chat-feed');
+
+    // 2. Wait 1.5 seconds (1500 milliseconds) before showing it
+    setTimeout(() => {
+        appendMessage('bot', qObj.q, 'wit-chat-feed');
+    }, 1500); 
 }
 
 function handleWitSend() {
@@ -234,9 +241,26 @@ function handleWitSend() {
 }
 
 function endWitnessSession(reason) {
+    // 1. Stop the clock
     clearInterval(State.witness.interval);
+    
+    // 2. Find the chat box
     const feed = document.getElementById('wit-chat-feed');
-    feed.innerHTML += `<div class="text-center p-8 glass mt-8"><h3 class="text-2xl text-gold mb-2">SESSION ENDED</h3><p class="text-muted">${reason}</p><button class="btn-primary px-8 py-2 rounded-full mt-4" onclick="navigateTo('dashboard')">RETURN HOME</button></div>`;
+    
+    // 3. Create the report card
+    const reportHTML = `
+        <div style="border: 2px solid #d4af37; padding: 20px; margin-top: 20px; background: rgba(0,0,0,0.5); border-radius: 15px;">
+            <h3 style="color: #d4af37; text-align: center;">COURTROOM PERFORMANCE REPORT</h3>
+            <p><strong>Result:</strong> ${reason}</p>
+            <p><strong>Questions Answered:</strong> ${State.witness.qIndex}</p>
+            <hr style="border-color: rgba(255,255,255,0.1)">
+            <p style="font-style: italic; color: #ccc;">Feedback: You handled the pressure well. Work on using more technical legal terms in your next session.</p>
+            <button onclick="navigateTo('dashboard')" style="background: #d4af37; color: black; width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; font-weight: bold;">RETURN TO MAIN MENU</button>
+        </div>
+    `;
+    
+    // 4. Put the report on the screen
+    feed.innerHTML += reportHTML;
     feed.scrollTop = feed.scrollHeight;
 }
 
