@@ -288,7 +288,7 @@
                     <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Witness Room</h3>
                     <p class="text-muted text-sm leading-relaxed mb-8">Take the stand. Defend your testimony under
                         pressure. Accuracy and detail are measured by the engine.</p>
-                    <button class="btn-primary px-8 py-3 rounded-full w-full">ENTER ROOM</button>
+                    <button class="btn-primary px-8 py-3 rounded-full w-full">ENTER CHASM</button>
                 </div>
 
                 <div onclick="initLawyerRoom()" class="glass p-8 rounded-2xl card text-center border-t-4 border-slate">
@@ -320,12 +320,11 @@
         <section id="rules-vault" class="section-nav">
             <div class="glass p-8 rounded-2xl h-[80vh] flex flex-col">
                 <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-                    <h2 class="text-3xl font-bold gold-text">Rules of Evidence</h2>
+                    <h2 class="text-3xl font-bold gold-text">Review</h2>
                     <input type="text" id="rules-search" placeholder="Search rules..." onkeyup="filterRules()" class="bg-black/30 border border-white/10 rounded-lg px-4 py-2 w-64 text-sm focus:border-gold outline-none text-white">
                 </div>
                 <div id="rules-list" class="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto pr-2 custom-scrollbar">
-                    <!-- Rules injected here -->
-                </div>
+                    </div>
             </div>
         </section>
 
@@ -376,11 +375,15 @@
                 <div id="wit-chat-feed" class="flex-grow p-6 overflow-y-auto space-y-6 scroll-hide">
                     </div>
                 <div class="p-6 bg-court-dark/50 border-t border-white/5">
-                    <div id="wit-input-area" class="flex gap-4">
+                    <div id="wit-input-area" class="flex gap-2 md:gap-4 items-center">
                         <input type="text" id="wit-user-msg" placeholder="Your testimony..."
                             class="flex-grow bg-white/5 border border-white/10 rounded-lg px-6 py-4 outline-none focus:border-gold transition-all"
                             autocomplete="off" onkeydown="if(event.key === 'Enter') handleWitSend()">
-                        <button onclick="handleWitSend()" class="btn-primary px-10 rounded-lg">SEND</button>
+                        
+                        <button id="wit-mic-btn" onclick="toggleVoice('wit-user-msg', 'wit-mic-btn', 'wit-stop-btn')" class="p-4 border border-gold rounded-full hover:bg-gold/10 transition-colors text-xl flex-shrink-0" title="Start Voice Input">🎤</button>
+                        <button id="wit-stop-btn" onclick="stopVoice()" class="hidden p-4 border border-red-500 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-xs font-bold text-red-500 transition-colors flex-shrink-0 flex items-center gap-2" title="Stop Voice Input"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> STOP</button>
+
+                        <button onclick="handleWitSend()" class="btn-primary px-10 py-4 rounded-lg flex-shrink-0">SEND</button>
                     </div>
                 </div>
             </div>
@@ -432,11 +435,15 @@
                 <div id="law-chat-feed" class="flex-grow p-6 overflow-y-auto space-y-6 scroll-hide">
                     </div>
                 <div class="p-6 bg-court-dark/50 border-t border-white/5">
-                    <div class="flex gap-4">
+                    <div class="flex gap-2 md:gap-4 items-center">
                         <input type="text" id="law-user-msg" placeholder="Ask your question..."
                             class="flex-grow bg-white/5 border border-white/10 rounded-lg px-6 py-4 outline-none focus:border-gold transition-all"
                             autocomplete="off" onkeydown="if(event.key === 'Enter') handleLawSend()">
-                        <button onclick="handleLawSend()" class="btn-primary px-10 rounded-lg">SUBMIT</button>
+
+                        <button id="law-mic-btn" onclick="toggleVoice('law-user-msg', 'law-mic-btn', 'law-stop-btn')" class="p-4 border border-gold rounded-full hover:bg-gold/10 transition-colors text-xl flex-shrink-0" title="Start Voice Input">🎤</button>
+                        <button id="law-stop-btn" onclick="stopVoice()" class="hidden p-4 border border-red-500 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-xs font-bold text-red-500 transition-colors flex-shrink-0 flex items-center gap-2" title="Stop Voice Input"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> STOP</button>
+
+                        <button onclick="handleLawSend()" class="btn-primary px-10 py-4 rounded-lg flex-shrink-0">SUBMIT</button>
                     </div>
                 </div>
             </div>
@@ -516,7 +523,90 @@
             </div>
         </div>
     </div>
+
+    <script>
+        let activeRecognition = null;
+
+        function toggleVoice(inputId, micBtnId, stopBtnId) {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRec) {
+                alert("Voice input is only supported in modern browsers like Google Chrome or Edge.");
+                return;
+            }
+
+            // Stop any existing session
+            if (activeRecognition) {
+                stopVoice();
+            }
+
+            const inputEl = document.getElementById(inputId);
+            const micBtn = document.getElementById(micBtnId);
+            const stopBtn = document.getElementById(stopBtnId);
+
+            activeRecognition = new SpeechRec();
+            activeRecognition.continuous = true; // Keeps listening until user hits STOP
+            activeRecognition.interimResults = true; // Displays words while talking
+            activeRecognition.lang = 'en-US';
+
+            // Toggle UI Buttons
+            micBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+
+            // Save existing text so we don't overwrite it immediately
+            let originalText = inputEl.value;
+            if (originalText && !originalText.endsWith(' ')) {
+                originalText += ' ';
+            }
+
+            activeRecognition.onresult = (event) => {
+                let interim = '';
+                let final = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        final += event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                
+                // Update the textbox live
+                inputEl.value = originalText + final + interim;
+            };
+
+            activeRecognition.onerror = (event) => {
+                console.error("Speech Recognition Error: ", event.error);
+                stopVoice();
+            };
+
+            activeRecognition.onend = () => {
+                // Reset UI when stopped automatically
+                micBtn.classList.remove('hidden');
+                stopBtn.classList.add('hidden');
+                activeRecognition = null;
+            };
+
+            // Start listening!
+            activeRecognition.start();
+            
+            // Store references so we can update the UI when the Stop button is clicked manually
+            activeRecognition.micBtn = micBtn;
+            activeRecognition.stopBtn = stopBtn;
+        }
+
+        function stopVoice() {
+            if (activeRecognition) {
+                activeRecognition.stop(); // Stops the mic
+                
+                // Swap buttons back
+                if (activeRecognition.micBtn) activeRecognition.micBtn.classList.remove('hidden');
+                if (activeRecognition.stopBtn) activeRecognition.stopBtn.classList.add('hidden');
+                
+                activeRecognition = null;
+            }
+        }
+    </script>
 </body>
 
 </html>
-
