@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Legal Lab</title>
+    <script>
+        (function() {
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                // Check if running in Google Apps Script
+                if (window.location.host.indexOf('script.googleusercontent.com') > -1 || window.location.host.indexOf('script.google.com') > -1) {
+                    // Check query parameters specifically, ignoring hash
+                    if (window.location.search.indexOf('page=mobile') === -1) {
+                        var newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?page=mobile';
+                        // Replace location to avoid history stack issues
+                        window.location.replace(newUrl);
+                    }
+                } else {
+                    // Fallback for local/other hosting
+                    if (window.location.pathname.indexOf('mobilesupport.html') === -1) {
+                        window.location.replace("mobilesupport.html");
+                    }
+                }
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+
+    <script src="Database.js"></script>
+    <script src="Engine.js"></script>
+
+    <style>
+        :root {
+            --court-dark: #0a0c10;
+            --court-panel: rgba(20, 24, 33, 0.8);
+            --gold: #d4af37;
+            --gold-glow: rgba(212, 175, 55, 0.3);
+            --slate: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+        }
+
+        body {
+            background-color: var(--court-dark);
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(30, 41, 59, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .glass {
+            background: var(--court-panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        .gold-border {
+            border-color: var(--gold);
+        }
+
+        .gold-text {
+            color: var(--gold);
+        }
+
+        .gold-shadow {
+            box-shadow: 0 0 20px var(--gold-glow);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #d4af37 0%, #a68a2d 100%);
+            color: black;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px var(--gold-glow);
+        }
+
+        .btn-outline {
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--gold);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .section-nav {
+            display: none;
+        }
+
+        .section-nav.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .typewriter {
+            overflow: hidden;
+            white-space: pre-wrap;
+            display: inline-block;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            background-color: var(--gold);
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .objection-btn {
+            background: #ef4444;
+            color: white;
+            padding: 1rem 2rem;
+            font-weight: 900;
+            border-radius: 9999px;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #1e293b;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-inner {
+            height: 100%;
+            background: var(--gold);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        #objection-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .objection-card {
+            background: #111827;
+            border: 1px solid var(--gold);
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .hint-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8">
+
+    <header class="flex justify-between items-center mb-12 max-w-7xl mx-auto">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('dashboard')">
+            <div
+                class="w-10 h-10 border-2 border-gold flex items-center justify-center text-gold font-bold bg-court-panel rounded">
+                ⚖️</div>
+            <div>
+                <h1 class="text-2xl leading-none tracking-tight">MICHIGAN<span
+                        class="text-gold font-bold ml-1">MOCK TRIAL</span></h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div id="action-log" class="hidden md:flex flex-col items-end text-[10px] text-muted uppercase tracking-widest text-right max-w-[200px]">
+                <span class="text-gold font-bold mb-1">SYSTEM LOG</span>
+                <span id="last-action" class="text-white opacity-70">Ready</span>
+            </div>
+            <button onclick="restartRoom()"
+                class="btn-outline px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2">
+                <span>RESTART</span> 🔄
+            </button>
+        </div>
+    </header>
+
+    <div id="back-nav" class="max-w-7xl mx-auto mb-8 hidden">
+        <button onclick="navigateTo('dashboard')" class="text-muted hover:text-gold text-sm flex items-center gap-2 transition-colors">
+            <span>← BACK TO DASHBOARD</span>
+        </button>
+    </div>
+
+    <main class="max-w-7xl mx-auto min-h-[70vh]">
+
+        <section id="dashboard" class="section-nav active">
+            <div class="text-center mb-16">
+                <h2 class="text-5xl font-bold mb-4">Training Chambers</h2>
+                <p class="text-xl text-muted max-w-2xl mx-auto font-light">The mathematical computer is ready. Choose
+                    your perspective to begin the simulation.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-4 mt-12">
+                <div onclick="initWitnessRoom()" class="glass p-8 rounded-2xl card text-center border-t-4 border-gold">
+                    <div class="text-5xl mb-6">👤</div>
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Witness Room</h3>
+                    <p class="text-muted text-sm leading-relaxed mb-8">Take the stand. Defend your testimony under
+                        pressure. Accuracy and detail are measured by the engine.</p>
+                    <button class="btn-primary px-8 py-3 rounded-full w-full">ENTER CHASM</button>
+                </div>
+
+                <div onclick="initLawyerRoom()" class="glass p-8 rounded-2xl card text-center border-t-4 border-slate">
+                    <div class="text-5xl mb-6">💼</div>
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Lawyer Room</h3>
+                    <p class="text-muted text-sm leading-relaxed mb-8">Examine the witness. Break their affidavit.
+                        Receive mathematical hints as you navigate the cross.</p>
+                    <button class="btn-primary px-8 py-3 rounded-full w-full">OPEN COURT</button>
+                </div>
+
+                <div onclick="initObjectionRoom()"
+                    class="glass p-8 rounded-2xl card text-center border-t-4 border-blue-400">
+                    <div class="text-5xl mb-6">⚡</div>
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Objection Room</h3>
+                    <p class="text-muted text-sm leading-relaxed mb-8">Live simulation. Spot the violations in 1-hour
+                        scripted roleplays. Total reflex test.</p>
+                    <button class="btn-primary px-8 py-3 rounded-full w-full">JOIN DRILL</button>
+                </div>
+
+                <div onclick="initRulesVault()" class="glass p-8 rounded-2xl card text-center border-t-4 border-purple-500">
+                    <div class="text-5xl mb-6">📜</div>
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Knowledge Vault</h3>
+                    <p class="text-muted text-sm leading-relaxed mb-8">Master the Rules of Evidence. Searchable library with pro-tips and pitfalls.</p>
+                    <button class="btn-primary px-8 py-3 rounded-full w-full">ACCESS ARCHIVE</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="rules-vault" class="section-nav">
+            <div class="glass p-8 rounded-2xl h-[80vh] flex flex-col">
+                <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+                    <h2 class="text-3xl font-bold gold-text">Rules of Evidence</h2>
+                    <input type="text" id="rules-search" placeholder="Search rules..." onkeyup="filterRules()" class="bg-black/30 border border-white/10 rounded-lg px-4 py-2 w-64 text-sm focus:border-gold outline-none text-white">
+                </div>
+                <div id="rules-list" class="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Rules injected here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="witness-room" class="section-nav">
+            <div id="wit-flow-1" class="wit-step active">
+                <h2 class="text-4xl font-bold text-center mb-12">Select Your Side</h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch mt-24">
+                    <div onclick="selectWitSide('plaintiff')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-gold w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">PLAINTIFF</h3>
+                        <p class="text-muted text-sm">The Burden of Proof</p>
+                    </div>
+                    <div onclick="selectWitSide('defense')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-slate w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">DEFENSE</h3>
+                        <p class="text-muted text-sm">The Shield of Justice</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="wit-flow-2" class="wit-step hidden">
+                <h2 class="text-4xl font-bold text-center mb-12">Who are you representing?</h2>
+                <div id="wit-list-cards" class="grid grid-cols-1 md:grid-cols-3 gap-8 justify-center mt-24">
+                    </div>
+            </div>
+
+            <div id="wit-flow-3" class="wit-step hidden">
+                <h2 class="text-4xl font-bold text-center mb-12">Select Examination Type</h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch">
+                    <div onclick="selectWitMode('direct')"
+                        class="glass p-12 rounded-2xl card border-gold w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">DIRECT</h3>
+                        <p class="text-muted text-sm">Friendly Inquiry</p>
+                    </div>
+                    <div onclick="selectWitMode('cross')"
+                        class="glass p-12 rounded-2xl card border-slate w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">CROSS</h3>
+                        <p class="text-muted text-sm">Hostile Interrogation</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="wit-chat-room" class="wit-step hidden h-[70vh] flex flex-col glass rounded-2xl overflow-hidden">
+                <div class="bg-black/50 p-4 border-b border-white/5 flex justify-between items-center">
+                    <div id="wit-chat-meta" class="text-sm font-mono text-gold uppercase tracking-widest"></div>
+                    <div id="wit-timer" class="text-xl font-bold text-red-400">05:00</div>
+                </div>
+                <div id="wit-chat-feed" class="flex-grow p-6 overflow-y-auto space-y-6 scroll-hide">
+                    </div>
+                <div class="p-6 bg-court-dark/50 border-t border-white/5">
+                    <div id="wit-input-area" class="flex gap-4">
+                        <input type="text" id="wit-user-msg" placeholder="Your testimony..."
+                            class="flex-grow bg-white/5 border border-white/10 rounded-lg px-6 py-4 outline-none focus:border-gold transition-all"
+                            autocomplete="off" onkeydown="if(event.key === 'Enter') handleWitSend()">
+                        <button onclick="handleWitSend()" class="btn-primary px-10 rounded-lg">SEND</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="lawyer-room" class="section-nav">
+            <div id="law-flow-1" class="law-step active">
+                <h2 class="text-4xl font-bold text-center mb-12">Counselor, Which Side?</h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch mt-24">
+                    <div onclick="selectLawSide('plaintiff')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-gold w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">PLAINTIFF</h3>
+                    </div>
+                    <div onclick="selectLawSide('defense')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-slate w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">DEFENSE</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div id="law-flow-2" class="law-step hidden">
+                <h2 class="text-4xl font-bold text-center mb-12">Examination Strategy</h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch mt-24">
+                    <div onclick="selectLawMode('direct')"
+                        class="glass p-12 rounded-2xl card border-gold w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">DIRECT</h3>
+                    </div>
+                    <div onclick="selectLawMode('cross')"
+                        class="glass p-12 rounded-2xl card border-slate w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">CROSS</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div id="law-flow-3" class="law-step hidden">
+                <h2 class="text-4xl font-bold text-center mb-12">Select Your Witness</h2>
+                <div id="law-list-cards" class="grid grid-cols-1 md:grid-cols-3 gap-8 justify-center mt-24">
+                    </div>
+            </div>
+
+            <div id="law-chat-room" class="law-step hidden h-[70vh] flex flex-col glass rounded-2xl overflow-hidden relative">
+                <div id="law-control-display" class="absolute top-4 right-4 bg-black/50 px-3 py-1 rounded border border-white/10 text-xs uppercase tracking-widest z-10">
+                    Control: <span id="law-control-score" class="text-green-400 font-bold">100%</span>
+                </div>
+                <div class="bg-black/50 p-4 border-b border-white/5">
+                    <div id="law-chat-meta" class="text-sm font-mono text-gold uppercase tracking-widest text-center">
+                    </div>
+                </div>
+                <div id="law-chat-feed" class="flex-grow p-6 overflow-y-auto space-y-6 scroll-hide">
+                    </div>
+                <div class="p-6 bg-court-dark/50 border-t border-white/5">
+                    <div class="flex gap-4">
+                        <input type="text" id="law-user-msg" placeholder="Ask your question..."
+                            class="flex-grow bg-white/5 border border-white/10 rounded-lg px-6 py-4 outline-none focus:border-gold transition-all"
+                            autocomplete="off" onkeydown="if(event.key === 'Enter') handleLawSend()">
+                        <button onclick="handleLawSend()" class="btn-primary px-10 rounded-lg">SUBMIT</button>
+                    </div>
+                </div>
+            </div>
+            <div id="law-hint-bar" class="hint-bar hidden">
+                <div class="max-w-7xl mx-auto flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-gold text-sm font-bold">SCHEMATIC HINT:</span>
+                        <div id="law-hint-text" class="text-xs text-muted max-w-xl italic">Waiting for strategy...</div>
+                    </div>
+                    <button class="text-[10px] text-muted underline hover:text-gold" onclick="cycleHint()">NEW
+                        HINT</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="objection-room" class="section-nav">
+            <div id="obj-flow-1" class="obj-step active">
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch mt-24">
+                    <div onclick="startObjectionSim('easy')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-green-500 w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">EASY</h3>
+                        <p class="text-muted text-sm">Explicit Violations</p>
+                    </div>
+                    <div onclick="startObjectionSim('medium')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-yellow-500 w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">MEDIUM</h3>
+                        <p class="text-muted text-sm">Mixed Complexity</p>
+                    </div>
+                    <div onclick="startObjectionSim('hard')"
+                        class="glass p-12 rounded-2xl card border-b-8 border-red-500 w-full md:w-80 text-center">
+                        <h3 class="text-3xl font-bold mb-4">HARD</h3>
+                        <p class="text-muted text-sm">Subtle Impeachment</p>
+                    </div>
+                </div>
+                <div class="mt-8 flex items-center justify-center gap-4">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="pressure-mode-toggle" class="sr-only peer">
+                            <div class="w-10 h-6 bg-gray-700 rounded-full shadow-inner peer-checked:bg-red-600 transition-colors"></div>
+                            <div class="dot absolute w-4 h-4 bg-white rounded-full shadow left-1 top-1 peer-checked:translate-x-4 transition-transform"></div>
+                        </div>
+                        <div class="ml-3 text-sm font-medium text-gray-300 uppercase tracking-wider">Pressure Mode</div>
+                    </label>
+                </div>
+            </div>
+
+            <div id="obj-countdown" class="obj-step hidden h-[60vh] flex flex-col justify-center items-center">
+                <h2 id="countdown-text" class="text-[12rem] font-bold gold-text leading-none">3</h2>
+                <p class="text-muted tracking-[1em] uppercase mt-4">Simulation Calibrating</p>
+            </div>
+
+            <div id="obj-sim-room" class="obj-step hidden h-[70vh] flex flex-col relative">
+                <div class="glass flex-grow rounded-2xl p-8 overflow-y-auto font-serif text-lg leading-relaxed relative scroll-hide"
+                    id="obj-sim-display">
+                    </div>
+
+                <div class="mt-8 flex flex-col items-center">
+                    <button onclick="handleObjectionClick()" class="objection-btn">OBJECTION!</button>
+                    <div class="mt-4 text-xs text-muted uppercase tracking-widest">Observe Carefully</div>
+                </div>
+
+                <div class="progress-bar mt-4">
+                    <div id="obj-progress" class="progress-inner"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="objection-overlay">
+        <div class="objection-card glass overflow-hidden">
+            <h2 class="text-2xl font-bold mb-6 gold-text border-b border-white/10 pb-4">State Grounds for Objection</h2>
+            <div id="objection-options" class="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+                </div>
+            <div class="mt-8 flex justify-end">
+                <button onclick="closeObjectionMenu()" class="text-muted hover:text-white mr-6">Cancel</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+
