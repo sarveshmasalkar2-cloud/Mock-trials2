@@ -524,89 +524,76 @@
         </div>
     </div>
 
-    <script>
-        let activeRecognition = null;
+<script>
+    let activeRecognition = null;
+    let finalTranscript = ''; // This stores your previous sentences
 
-        function toggleVoice(inputId, micBtnId, stopBtnId) {
-            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    function toggleVoice(inputId, micBtnId, stopBtnId) {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRec) {
+            alert("Voice input is only supported in modern browsers like Google Chrome or Edge.");
+            return;
+        }
+
+        if (activeRecognition) {
+            stopVoice();
+            return;
+        }
+
+        const inputEl = document.getElementById(inputId);
+        const micBtn = document.getElementById(micBtnId);
+        const stopBtn = document.getElementById(stopBtnId);
+
+        activeRecognition = new SpeechRec();
+        activeRecognition.continuous = true; 
+        activeRecognition.interimResults = true; 
+        activeRecognition.lang = 'en-US';
+
+        // Start with whatever is already typed in the box
+        finalTranscript = inputEl.value + (inputEl.value ? ' ' : '');
+
+        micBtn.classList.add('hidden');
+        stopBtn.classList.remove('hidden');
+
+        activeRecognition.onresult = (event) => {
+            let interimTranscript = '';
             
-            if (!SpeechRec) {
-                alert("Voice input is only supported in modern browsers like Google Chrome or Edge.");
-                return;
-            }
-
-            // Stop any existing session
-            if (activeRecognition) {
-                stopVoice();
-            }
-
-            const inputEl = document.getElementById(inputId);
-            const micBtn = document.getElementById(micBtnId);
-            const stopBtn = document.getElementById(stopBtnId);
-
-            activeRecognition = new SpeechRec();
-            activeRecognition.continuous = true; // Keeps listening until user hits STOP
-            activeRecognition.interimResults = true; // Displays words while talking
-            activeRecognition.lang = 'en-US';
-
-            // Toggle UI Buttons
-            micBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
-
-            // Save existing text so we don't overwrite it immediately
-            let originalText = inputEl.value;
-            if (originalText && !originalText.endsWith(' ')) {
-                originalText += ' ';
-            }
-
-            activeRecognition.onresult = (event) => {
-                let interim = '';
-                let final = '';
-                
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        final += event.results[i][0].transcript;
-                    } else {
-                        interim += event.results[i][0].transcript;
-                    }
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript + ' '; 
+                } else {
+                    interimTranscript += transcript;
                 }
-                
-                // Update the textbox live
-                inputEl.value = originalText + final + interim;
-            };
-
-            activeRecognition.onerror = (event) => {
-                console.error("Speech Recognition Error: ", event.error);
-                stopVoice();
-            };
-
-            activeRecognition.onend = () => {
-                // Reset UI when stopped automatically
-                micBtn.classList.remove('hidden');
-                stopBtn.classList.add('hidden');
-                activeRecognition = null;
-            };
-
-            // Start listening!
-            activeRecognition.start();
-            
-            // Store references so we can update the UI when the Stop button is clicked manually
-            activeRecognition.micBtn = micBtn;
-            activeRecognition.stopBtn = stopBtn;
-        }
-
-        function stopVoice() {
-            if (activeRecognition) {
-                activeRecognition.stop(); // Stops the mic
-                
-                // Swap buttons back
-                if (activeRecognition.micBtn) activeRecognition.micBtn.classList.remove('hidden');
-                if (activeRecognition.stopBtn) activeRecognition.stopBtn.classList.add('hidden');
-                
-                activeRecognition = null;
             }
-        }
-    </script>
-</body>
+            
+            // Combine the locked-in text with the words you are currently saying
+            inputEl.value = finalTranscript + interimTranscript;
+        };
 
-</html>
+        activeRecognition.onerror = (event) => {
+            console.error("Speech Error: ", event.error);
+            stopVoice();
+        };
+
+        activeRecognition.onend = () => {
+            micBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            activeRecognition = null;
+        };
+
+        activeRecognition.start();
+        activeRecognition.micBtn = micBtn;
+        activeRecognition.stopBtn = stopBtn;
+    }
+
+    function stopVoice() {
+        if (activeRecognition) {
+            activeRecognition.stop();
+            if (activeRecognition.micBtn) activeRecognition.micBtn.classList.remove('hidden');
+            if (activeRecognition.stopBtn) activeRecognition.stopBtn.classList.add('hidden');
+            activeRecognition = null;
+        }
+    }
+</script>
