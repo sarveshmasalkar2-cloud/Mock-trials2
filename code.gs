@@ -1,28 +1,50 @@
+
+// code.gs - Quantum Legal Lab Analytics Ledger
+// This file represents the server-side Google Apps Script component for the Quantum Legal Lab.
+// In a full deployment, this would handle persistent storage of user stats and case outcomes.
+
 function doGet(e) {
-  var page = e.parameter.page;
-  
-  if (page == 'mobile') {
-    try {
-      return HtmlService.createTemplateFromFile('mobilesupport')
-        .evaluate()
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
-        .setTitle('Quantum Legal Lab - Mobile')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-    } catch (err) {
-      // Fallback if mobilesupport file is missing in GAS project
-      return HtmlService.createHtmlOutput("Error: mobilesupport.html not found in script project. Please create it.")
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  return ContentService.createTextOutput("Quantum Legal Lab Analytics Service Active");
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    
+    if (data.action === "log_session") {
+      return logSession(data);
+    } else if (data.action === "get_leaderboard") {
+      return getLeaderboard();
     }
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Invalid action" }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function logSession(data) {
+  // In a real implementation, this would write to a Google Sheet
+  // const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Logs");
+  // sheet.appendRow([new Date(), data.user, data.score, data.room]);
   
-  return HtmlService.createTemplateFromFile('index')
-    .evaluate()
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setTitle('Quantum Legal Lab')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  console.log("Session logged:", data);
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: "success", logged: true }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+function getLeaderboard() {
+  // Mock leaderboard data
+  const leaderboard = [
+    { user: "Novice_Jurist", score: 95 },
+    { user: "Legal_Eagle", score: 88 },
+    { user: "Quantum_Counsel", score: 82 }
+  ];
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: "success", data: leaderboard }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
-
