@@ -376,33 +376,36 @@ async function handleLawSend() {
     const q = input.value.trim();
     if (!q) return;
 
+    // 1. Find the witness's facts from your Database.js
+    const witnessName = State.lawyer.name;
+    const affidavitArray = window.MockTrialCaseData.witnesses[witnessName] || [];
+    const witnessFacts = affidavitArray.join(" "); // Turns the list of lines into one big story
+
     appendMessage('user', q, 'law-chat-feed');
     input.value = '';
 
-    // YOUR WORKER URL
     const workerUrl = "https://gemini-bridge.sarveshmasalkar2.workers.dev/"; 
 
     try {
         const response = await fetch(workerUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: q })
+            body: JSON.stringify({ 
+                prompt: q,
+                context: witnessFacts, // We send the case files here!
+                witnessName: witnessName
+            })
         });
 
         const result = await response.json();
         
-        // Use result.response (Cloudflare style) instead of result.data (Google style)
         if (result.response) {
             appendMessage('bot', result.response, 'law-chat-feed');
-        } else if (result.error) {
-            appendMessage('bot', "Witness Error: " + result.error, 'law-chat-feed');
         } else {
-            appendMessage('bot', "The witness just stares at you.", 'law-chat-feed');
+            appendMessage('bot', "The witness is confused.", 'law-chat-feed');
         }
-
     } catch (error) {
-        console.error("Bridge Error:", error);
-        appendMessage('bot', "Connection failed. Is the Worker deployed?", 'law-chat-feed');
+        appendMessage('bot', "Connection lost.", 'law-chat-feed');
     }
 
     const feed = document.getElementById('law-chat-feed');
