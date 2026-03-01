@@ -376,14 +376,39 @@ async function handleLawSend() {
     const q = input.value.trim();
     if (!q) return;
 
-    // 1. Find the witness's facts from your Database.js
-    const witnessName = State.lawyer.name;
-    const affidavitArray = window.MockTrialCaseData.witnesses[witnessName] || [];
-    const witnessFacts = affidavitArray.join(" "); // Turns the list of lines into one big story
-
+    // Display user message immediately
     appendMessage('user', q, 'law-chat-feed');
     input.value = '';
 
+    // 1. EINSTEIN SEARCH FUSION: Scanning the 81-page array
+    const witnessName = State.lawyer.name;
+    const allPages = window.FullCaseContext || [];
+    const keywords = q.toLowerCase().split(' ').filter(w => w.length > 3);
+    
+    // We score every line in the 81 pages based on relevance
+    let scoredLines = allPages.map(line => {
+        let score = 0;
+        const lowerLine = line.toLowerCase();
+        
+        // Bonus for matching the current witness name
+        if (lowerLine.includes(witnessName.toLowerCase())) score += 10;
+        
+        // Points for keyword matches
+        keywords.forEach(word => {
+            if (lowerLine.includes(word)) score += 5;
+        });
+        
+        return { text: line, score: score };
+    });
+
+    // Pick the top 8 most relevant "Fact Chunks"
+    const relevantFacts = scoredLines
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8)
+        .map(item => item.text)
+        .join("\n");
+
+    // 2. SEND TO CLOUDFLARE
     const workerUrl = "https://gemini-bridge.sarveshmasalkar2.workers.dev/"; 
 
     try {
@@ -392,7 +417,7 @@ async function handleLawSend() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
                 prompt: q,
-                context: witnessFacts, // We send the case files here!
+                context: relevantFacts, // The "Cheat Sheet"
                 witnessName: witnessName
             })
         });
@@ -402,10 +427,11 @@ async function handleLawSend() {
         if (result.response) {
             appendMessage('bot', result.response, 'law-chat-feed');
         } else {
-            appendMessage('bot', "The witness is confused.", 'law-chat-feed');
+            appendMessage('bot', "The witness remains silent.", 'law-chat-feed');
         }
     } catch (error) {
-        appendMessage('bot', "Connection lost.", 'law-chat-feed');
+        console.error("Search Fusion Error:", error);
+        appendMessage('bot', "The witness is unresponsive.", 'law-chat-feed');
     }
 
     const feed = document.getElementById('law-chat-feed');
