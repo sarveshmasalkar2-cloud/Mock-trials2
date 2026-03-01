@@ -389,26 +389,13 @@ async function handleLawSend() {
         });
 
         const result = await response.json();
-        console.log("DEBUG: Raw Worker Response:", result); // LOOK AT THIS IN F12
-
-        if (result.error) {
-            appendMessage('bot', "Worker Error: " + result.error, 'law-chat-feed');
-            return;
-        }
-
-        const rawData = result.data;
-        // This regex looks for the text inside ["text"]
-        const match = rawData.match(/\["([^"\\\[\]]+)"\]/);
         
-        if (match && match[1]) {
-            const cleanAnswer = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-            appendMessage('bot', cleanAnswer, 'law-chat-feed');
+        if (result.response) {
+            appendMessage('bot', result.response, 'law-chat-feed');
         } else {
-            // This is what you are seeing now
-            appendMessage('bot', "The witness is confused by the data format.", 'law-chat-feed');
+            appendMessage('bot', "The witness is speechless.", 'law-chat-feed');
         }
     } catch (error) {
-        console.error("Bridge Error:", error);
         appendMessage('bot', "Connection failed.", 'law-chat-feed');
     }
 }
