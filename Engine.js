@@ -371,236 +371,61 @@ function filterRules() {
     });
 }
 
-// ========== TRIPLE-LOCK ENGINE ==========
+// ========== UPDATED GEMINI BRIDGE ENGINE ==========
 async function handleLawSend() {
     const input = document.getElementById('law-user-msg');
     const q = input.value.trim();
     if (!q) return;
 
+    // 1. Display your question in the chat
     appendMessage('user', q, 'law-chat-feed');
     input.value = '';
-    logAction("Lawyer Question Submitted");
+    logAction("Question Sent to Witness...");
 
-    // --- CROSS-EXAMINATION TRACKER ---
-    const wordCount = q.split(/\s+/).length;
-    if (wordCount > 15) {
-        State.lawyer.controlScore = Math.max(0, State.lawyer.controlScore - 5);
-    } else {
-        State.lawyer.controlScore = Math.min(100, State.lawyer.controlScore + 2);
-    }
-    const controlEl = document.getElementById('law-control-score');
-    if (controlEl) {
-        controlEl.innerText = State.lawyer.controlScore + '%';
-        controlEl.style.color = State.lawyer.controlScore > 80 ? '#4ade80' : (State.lawyer.controlScore < 50 ? '#ef4444' : '#d4af37');
-    }
+    // 2. Show a "Thinking..." message
+    const typingId = "typing-" + Date.now();
+    appendMessage('bot', "Witness is thinking...", 'law-chat-feed', typingId);
 
-    // Get the witness's testimony lines from the patched database
-    let textArray = [];
+    // 3. YOUR WORKER URL (From your screenshot)
+    const workerUrl = "https://gemini-bridge.sarveshmasalkar2.workers.dev/"; 
+
     try {
-        const witnessName = State.lawyer.name;
-        if (window.MockTrialCaseData && window.MockTrialCaseData.witnesses) {
-            textArray = window.MockTrialCaseData.witnesses[witnessName] || [];
-        }
-    } catch (e) {
-        console.warn("Error accessing witness data", e);
-    }
+        const response = await fetch(workerUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                prompt: `You are the witness ${State.lawyer.name}. Answer this lawyer's question briefly based on your affidavit: ${q}` 
+            })
+        });
 
-    // ----- LOCK 1: PATTERN MATCHER (intro / role) -----
-    const lowerQ = q.toLowerCase();
-    const roleInfo = window.WitnessRoles[State.lawyer.name];
-    
-    // Handle greetings and simple intros
-    if (lowerQ.match(/^(hi|hello|good morning|good afternoon|good evening)\b/)) {
-        return setTimeout(() => appendMessage('bot', "Hello, Counselor.", 'law-chat-feed'), 800);
-    }
-    if (lowerQ.match(/how are you/)) {
-        return setTimeout(() => appendMessage('bot', "I'm doing well, thank you.", 'law-chat-feed'), 800);
-    }
-    
-    // Name / role / job questions – answer from WitnessRoles or first line of testimony
-    if (lowerQ.includes('name') || lowerQ.includes('who are you') || lowerQ.includes('your job') || lowerQ.includes('your role')) {
-        let answer = '';
-        if (roleInfo) {
-            answer = `My name is ${State.lawyer.name}. I am the ${roleInfo.title}.`;
-        } else if (textArray.length > 0) {
-            answer = textArray[0]; // first line usually contains introduction
+        const result = await response.json();
+        
+        // Remove the "Thinking..." message
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        // 4. Parse Google's messy data format
+        const rawData = result.data;
+        const match = rawData.match(/\["([^"]+)"\]/);
+        
+        if (match && match[1]) {
+            const cleanAnswer = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            appendMessage('bot', cleanAnswer, 'law-chat-feed');
         } else {
-            answer = `My name is ${State.lawyer.name}.`;
+            appendMessage('bot', "The witness remains silent. (Check your Worker logs)", 'law-chat-feed');
         }
-        return setTimeout(() => appendMessage('bot', answer, 'law-chat-feed'), 800);
+
+    } catch (error) {
+        console.error("Bridge Error:", error);
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        appendMessage('bot', "The witness is unresponsive. Check your internet or Cloudflare variables.", 'law-chat-feed');
     }
 
-    // ----- PREPARE FOR LOCKS 2 & 3 -----
-    if (textArray.length === 0) {
-        // No testimony data – fallback
-        const fallbacks = [
-            "I don't recall that specifically, Counselor.",
-            "My affidavit doesn't speak to that.",
-            "I don't have that information."
-        ];
-        return setTimeout(() => appendMessage('bot', fallbacks[Math.floor(Math.random() * fallbacks.length)], 'law-chat-feed'), 800);
-    }
-
-    // Tokenizer & stopwords
-    const stopwords = new Set(['the','is','in','at','of','on','and','a','an','to','it','for','with','that','this','did','do','you','your','i','me','my','we','our','us','he','him','his','she','her','they','them','their','what','which','who','whom','whose','why','how','where','when','are','were','was','been','have','has','had','will','would','shall','should','may','might','must','can','could']);
-    const tokenize = (str) => str.toLowerCase().split(/[\s,\.!?;:()\-]+/).filter(w => w.length >= 2 && !stopwords.has(w));
-
-    // --- SEMANTIC EXPANSION ---
-    const expandTokens = (tokens) => {
-        let expanded = [...tokens];
-        tokens.forEach(t => {
-            for (const [key, syns] of Object.entries(SYNONYMS)) {
-                if (key === t || syns.includes(t)) {
-                    expanded.push(key);
-                    expanded.push(...syns);
-                }
-            }
-        });
-        return [...new Set(expanded)]; // unique
-    };
-
-    const queryTokens = expandTokens(tokenize(q));
-    if (queryTokens.length === 0) {
-        // If query contains only stopwords, use a simple fallback
-        return setTimeout(() => appendMessage('bot', "Could you please rephrase your question?", 'law-chat-feed'), 800);
-    }
-
-    // Build TF‑IDF vectors for all lines
-    const lines = textArray;
-    const allTokens = [];
-    lines.forEach((line, idx) => {
-        const tokens = tokenize(line); // Don't expand line tokens, only query
-        allTokens[idx] = tokens;
-    });
-
-    // Compute IDF for each token (across all lines)
-    const tokenDocCount = {};
-    allTokens.forEach(tokens => {
-        const unique = new Set(tokens);
-        unique.forEach(tok => tokenDocCount[tok] = (tokenDocCount[tok] || 0) + 1);
-    });
-    const totalDocs = lines.length;
-    const idf = {};
-    for (const [tok, count] of Object.entries(tokenDocCount)) {
-        idf[tok] = Math.log(totalDocs / count) + 1;  // smooth
-    }
-
-    // Compute TF‑IDF vector for query
-    const queryVec = {};
-    queryTokens.forEach(tok => queryVec[tok] = (queryVec[tok] || 0) + 1);
-    // Normalize query vector length
-    let queryNorm = 0;
-    for (const tok in queryVec) {
-        const tf = queryVec[tok] / queryTokens.length;  // term frequency
-        const tfidf = tf * (idf[tok] || 1);
-        queryVec[tok] = tfidf;
-        queryNorm += tfidf * tfidf;
-    }
-    queryNorm = Math.sqrt(queryNorm);
-
-    // Precompute line vectors
-    const lineVectors = lines.map((_, idx) => {
-        const tokens = allTokens[idx];
-        const vec = {};
-        const len = tokens.length;
-        tokens.forEach(tok => vec[tok] = (vec[tok] || 0) + 1);
-        // Normalize term frequency
-        for (const tok in vec) {
-            vec[tok] = (vec[tok] / len) * (idf[tok] || 1);
-        }
-        return vec;
-    });
-
-    // ----- LOCK 2: COSINE SIMILARITY -----
-    let bestCosine = -1;
-    let bestCosineIdx = -1;
-    lineVectors.forEach((vec, idx) => {
-        let dot = 0, normA = 0, normB = queryNorm;
-        for (const tok in queryVec) {
-            if (vec[tok]) dot += queryVec[tok] * vec[tok];
-        }
-        for (const tok in vec) normA += vec[tok] * vec[tok];
-        normA = Math.sqrt(normA);
-        let sim = (normA && normB) ? dot / (normA * normB) : 0;
-
-        // --- RECENCY PENALTY ---
-        if (State.lawyer.usedLines[idx]) {
-            sim *= 0.5; // 50% penalty
-        }
-
-        // --- LOGIC BUFF (Exact Match) ---
-        if (lines[idx].toLowerCase().includes(q.toLowerCase())) {
-            sim *= 2.0; // 2x multiplier
-        }
-
-        if (sim > bestCosine) {
-            bestCosine = sim;
-            bestCosineIdx = idx;
-        }
-    });
-
-    // ----- LOCK 3: FUZZY INCLUSION (simple stemming) -----
-    const stem = (word) => word.replace(/(ed|ing|s|es|ly)$/, '');  // crude stemmer
-    const queryStems = queryTokens.map(stem);
-    let bestFuzzyScore = 0;
-    let bestFuzzyIdx = -1;
-    lines.forEach((line, idx) => {
-        const lineTokens = tokenize(line);
-        const lineStems = lineTokens.map(stem);
-        let matchCount = 0;
-        queryStems.forEach(qs => {
-            if (lineStems.some(ls => ls.includes(qs) || qs.includes(ls))) matchCount++;
-        });
-        let score = matchCount / queryStems.length;
-
-        // --- RECENCY PENALTY (Fuzzy) ---
-        if (State.lawyer.usedLines[idx]) {
-            score *= 0.5;
-        }
-
-        if (score > bestFuzzyScore) {
-            bestFuzzyScore = score;
-            bestFuzzyIdx = idx;
-        }
-    });
-
-    // Combine scores: if cosine is decent, use it; otherwise fallback to fuzzy
-    const COSINE_THRESHOLD = 0.15;
-    let selectedIdx;
-    if (bestCosine >= COSINE_THRESHOLD) {
-        selectedIdx = bestCosineIdx;
-    } else if (bestFuzzyScore > 0.3) {
-        selectedIdx = bestFuzzyIdx;
-    } else {
-        // No good match – random fallback
-        const fallbacks = [
-            "I'm not sure I follow, Counselor.",
-            "Could you rephrase that?",
-            "That's not something I can answer from my affidavit."
-        ];
-        return setTimeout(() => appendMessage('bot', fallbacks[Math.floor(Math.random() * fallbacks.length)], 'law-chat-feed'), 800);
-    }
-
-    // Mark line as used
-    State.lawyer.usedLines[selectedIdx] = (State.lawyer.usedLines[selectedIdx] || 0) + 1;
-
-    let bestLine = lines[selectedIdx];
-
-    // Add a small prefix based on mode (direct/cross) for realism
-    let prefix = "";
-    if (State.lawyer.mode === 'cross') {
-        const crossPref = ["As I said, ", "Actually, ", "Yes, "];
-        prefix = Math.random() > 0.6 ? crossPref[Math.floor(Math.random()*crossPref.length)] : "";
-    } else {
-        const directPref = ["Certainly. ", "Yes. "];
-        prefix = Math.random() > 0.6 ? directPref[Math.floor(Math.random()*directPref.length)] : "";
-    }
-
-    setTimeout(() => {
-        appendMessage('bot', prefix + bestLine, 'law-chat-feed');
-    }, 1000);
+    // Scroll to bottom
+    const feed = document.getElementById('law-chat-feed');
+    feed.scrollTop = feed.scrollHeight;
 }
-
 function cycleHint() {
     const h = State.lawyer.hints[Math.floor(Math.random() * State.lawyer.hints.length)];
     document.getElementById('law-hint-text').innerText = h;
