@@ -379,6 +379,7 @@ async function handleLawSend() {
     appendMessage('user', q, 'law-chat-feed');
     input.value = '';
 
+    // YOUR WORKER URL
     const workerUrl = "https://gemini-bridge.sarveshmasalkar2.workers.dev/"; 
 
     try {
@@ -390,14 +391,22 @@ async function handleLawSend() {
 
         const result = await response.json();
         
+        // Use result.response (Cloudflare style) instead of result.data (Google style)
         if (result.response) {
             appendMessage('bot', result.response, 'law-chat-feed');
+        } else if (result.error) {
+            appendMessage('bot', "Witness Error: " + result.error, 'law-chat-feed');
         } else {
-            appendMessage('bot', "The witness is speechless.", 'law-chat-feed');
+            appendMessage('bot', "The witness just stares at you.", 'law-chat-feed');
         }
+
     } catch (error) {
-        appendMessage('bot', "Connection failed.", 'law-chat-feed');
+        console.error("Bridge Error:", error);
+        appendMessage('bot', "Connection failed. Is the Worker deployed?", 'law-chat-feed');
     }
+
+    const feed = document.getElementById('law-chat-feed');
+    feed.scrollTop = feed.scrollHeight;
 }
 function cycleHint() {
     const h = State.lawyer.hints[Math.floor(Math.random() * State.lawyer.hints.length)];
