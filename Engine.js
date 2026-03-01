@@ -371,60 +371,46 @@ function filterRules() {
     });
 }
 
-// ========== UPDATED GEMINI BRIDGE ENGINE ==========
 async function handleLawSend() {
     const input = document.getElementById('law-user-msg');
     const q = input.value.trim();
     if (!q) return;
 
-    // 1. Display your question in the chat
     appendMessage('user', q, 'law-chat-feed');
     input.value = '';
-    logAction("Question Sent to Witness...");
 
-    // 2. Show a "Thinking..." message
-    const typingId = "typing-" + Date.now();
-    appendMessage('bot', "Witness is thinking...", 'law-chat-feed', typingId);
-
-    // 3. YOUR WORKER URL (From your screenshot)
     const workerUrl = "https://gemini-bridge.sarveshmasalkar2.workers.dev/"; 
 
     try {
         const response = await fetch(workerUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                prompt: `You are the witness ${State.lawyer.name}. Answer this lawyer's question briefly based on your affidavit: ${q}` 
-            })
+            body: JSON.stringify({ prompt: q })
         });
 
         const result = await response.json();
-        
-        // Remove the "Thinking..." message
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
+        console.log("DEBUG: Raw Worker Response:", result); // LOOK AT THIS IN F12
 
-        // 4. Parse Google's messy data format
+        if (result.error) {
+            appendMessage('bot', "Worker Error: " + result.error, 'law-chat-feed');
+            return;
+        }
+
         const rawData = result.data;
-        const match = rawData.match(/\["([^"]+)"\]/);
+        // This regex looks for the text inside ["text"]
+        const match = rawData.match(/\["([^"\\\[\]]+)"\]/);
         
         if (match && match[1]) {
             const cleanAnswer = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
             appendMessage('bot', cleanAnswer, 'law-chat-feed');
         } else {
-            appendMessage('bot', "The witness remains silent. (Check your Worker logs)", 'law-chat-feed');
+            // This is what you are seeing now
+            appendMessage('bot', "The witness is confused by the data format.", 'law-chat-feed');
         }
-
     } catch (error) {
         console.error("Bridge Error:", error);
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
-        appendMessage('bot', "The witness is unresponsive. Check your internet or Cloudflare variables.", 'law-chat-feed');
+        appendMessage('bot', "Connection failed.", 'law-chat-feed');
     }
-
-    // Scroll to bottom
-    const feed = document.getElementById('law-chat-feed');
-    feed.scrollTop = feed.scrollHeight;
 }
 function cycleHint() {
     const h = State.lawyer.hints[Math.floor(Math.random() * State.lawyer.hints.length)];
