@@ -318,43 +318,56 @@ function startLawyerInquiry(name) {
 
 function initRulesVault() {
     navigateTo('rules-vault');
-    logAction("Accessed Review Room");
+    logAction("Review Room Opened");
 
-    // Load mastery badge
-    _rv_updateMasteryBadge();
+    // Build rule cards in the browse panel
+    _rv_renderRulesList('');
 
-    // Default to strategy tab
-    switchReviewTab('strategy', document.querySelector('.rv-tab'));
+    // Build all dynamic modules
+    buildTechniqueCards();
+    buildFactLab();
+    initBattleDrills();
+    updateMasteryScoreDisplay();
 
-    // Pre-load rules list (for when user navigates to rules tab)
-    _rv_renderRulesList();
+    // Restore last tab
+    const lastTab = _rv_getMastery('lastTab', 'strategy');
+    switchReviewTab(lastTab);
 }
+
 function filterRules() {
-    const query = document.getElementById('rules-search').value.toLowerCase();
+    const input = document.getElementById('rules-search');
+    const query = input ? input.value.toLowerCase() : '';
+    _rv_renderRulesList(query);
+}
+
+function _rv_renderRulesList(query) {
     const list = document.getElementById('rules-list');
     if (!list) return;
-    const rules = window.MockTrialRulesData || [];
     list.innerHTML = '';
+    const rules = window.MockTrialRulesData || [];
     rules.forEach(rule => {
-        if (rule.rule.toLowerCase().includes(query) ||
-            rule.name.toLowerCase().includes(query) ||
-            rule.desc.toLowerCase().includes(query) ||
-            (rule.tip && rule.tip.toLowerCase().includes(query)) ||
-            (rule.pitfall && rule.pitfall.toLowerCase().includes(query))) {
-            const div = document.createElement('div');
-            div.className = "glass p-5 rounded-xl border border-white/5 hover:border-gold transition-colors";
-            div.innerHTML = `
-                <div class="flex justify-between items-start mb-2 flex-wrap gap-1">
-                    <h3 style="font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--gold);">Rule ${rule.rule}</h3>
-                    <span style="font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-muted); background:rgba(255,255,255,0.07); padding:3px 8px; border-radius:50px;">${rule.name}</span>
-                </div>
-                <p style="font-size:0.78rem; color:#cbd5e1; margin-bottom:10px; font-style:italic; line-height:1.6;">"${rule.desc}"</p>
-                ${rule.tip ? `<div style="font-size:0.72rem; margin-bottom:6px;"><span style="color:#4ade80; font-weight:700;">PRO-TIP: </span><span style="color:#94a3b8;">${rule.tip}</span></div>` : ''}
-                ${rule.pitfall ? `<div style="font-size:0.72rem;"><span style="color:#fca5a5; font-weight:700;">PITFALL: </span><span style="color:#94a3b8;">${rule.pitfall}</span></div>` : ''}
-            `;
-            list.appendChild(div);
-        }
+        if (query && !rule.rule.toLowerCase().includes(query) &&
+            !rule.name.toLowerCase().includes(query) &&
+            !rule.desc.toLowerCase().includes(query) &&
+            !(rule.tip && rule.tip.toLowerCase().includes(query)) &&
+            !(rule.pitfall && rule.pitfall.toLowerCase().includes(query))) return;
+
+        const div = document.createElement('div');
+        div.className = "glass p-5 rounded-xl border border-white/5 hover:border-gold transition-colors";
+        div.innerHTML = `
+            <div class="flex justify-between items-start mb-2 gap-2">
+                <h3 class="text-lg font-bold gold-text leading-none">Rule ${rule.rule}</h3>
+                <span class="text-[10px] text-muted uppercase tracking-widest text-right">${rule.name}</span>
+            </div>
+            <p class="text-xs text-gray-300 mb-3 italic leading-relaxed">"${rule.desc}"</p>
+            ${rule.tip ? `<div class="mb-1 text-xs"><span class="text-green-400 font-bold">PRO-TIP: </span><span class="text-gray-400">${rule.tip}</span></div>` : ''}
+            ${rule.pitfall ? `<div class="text-xs"><span class="text-red-400 font-bold">PITFALL: </span><span class="text-gray-400">${rule.pitfall}</span></div>` : ''}
+        `;
+        list.appendChild(div);
     });
+    if (list.children.length === 0) {
+        list.innerHTML = `<div class="text-xs text-muted p-4 col-span-full">No rules match "${query}"</div>`;
+    }
 }
 
 async function handleLawSend() {
@@ -517,79 +530,56 @@ function playNextLine() {
 }
 
 function handleObjectionClick() {
+    // Pause
     clearTimeout(State.objection.interval);
-    document.body.style.overflow = 'hidden'; // Lock Scroll
-    
+    logAction("OBJECTION CLICKED");
+
     const overlay = document.getElementById('objection-overlay');
-    overlay.style.display = 'flex';
-    
     const options = document.getElementById('objection-options');
     options.innerHTML = '';
-    
-    // THE FIX: Use window.MockTrialRulesData to generate buttons
+
+    // Ensure MockTrialRulesData exists
     const rules = window.MockTrialRulesData || [];
     rules.forEach(rule => {
         const btn = document.createElement('button');
-        btn.className = "objection-rule-btn";
-        btn.innerHTML = `<span>Rule ${rule.rule}</span><span>${rule.name}</span>`;
-        
-        // FAST TOUCH LOGIC: Responds instantly to finger taps
-        const trigger = (e) => {
-            e.preventDefault();
-            submitObjection(rule.rule);
-        };
-        btn.addEventListener('touchend', trigger);
-        btn.addEventListener('click', trigger);
-        
+        btn.className = "btn-outline py-3 px-4 rounded text-left text-sm flex justify-between hover:bg-white/5 transition-colors";
+        btn.innerHTML = `<span class="font-mono text-gold-400">Rule ${rule.rule}</span><span class="text-gray-300">${rule.name}</span>`;
+        btn.onclick = () => submitObjection(rule.rule);
         options.appendChild(btn);
     });
+
+    overlay.style.display = 'flex';
 }
 
 function submitObjection(ruleId) {
-    // 1. Get the current line from the script to see if it's a violation
-    const currentLine = State.objection.script[State.objection.lineIndex];
-    const isCorrect = currentLine.isViolation && String(currentLine.ruleNum) === String(ruleId);
-    
     const overlay = document.getElementById('objection-overlay');
-    document.body.style.overflow = 'auto'; // Unlock Scroll
     overlay.style.display = 'none';
+    logAction(`Submitted Objection: Rule ${ruleId}`);
 
-    // 2. Create the Feedback Banner
-    const feedback = document.createElement('div');
-    feedback.className = "judge-feedback-banner";
-    feedback.style = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        z-index: 9999; color: white; text-align: center; font-family: 'Playfair Display', serif;
-        background: ${isCorrect ? 'rgba(21, 128, 61, 0.95)' : 'rgba(153, 27, 27, 0.95)'};
-    `;
+    const violation = State.objection.activeViolation;
+    let isSuccess = false;
+    let title = "OVERRULED";
+    let msg = "There was no legal grounds for an objection here.";
 
-    // 3. Logic for "Why it is incorrect"
-    let detailText = "";
-    if (isCorrect) {
-        detailText = `Correct! ${currentLine.reason || ""}`;
-    } else if (currentLine.isViolation) {
-        detailText = `Incorrect. You selected Rule ${ruleId}, but this was actually ${currentLine.ruleName} (Rule ${currentLine.ruleNum}).`;
-    } else {
-        detailText = `Incorrect. This statement was actually admissible (No Violation).`;
+    if (violation) {
+        if (String(violation.ruleNum) === String(ruleId)) { // Use ruleNum from script
+            isSuccess = true;
+            title = "SUSTAINED";
+            msg = violation.reason || "Correct objection.";
+        } else {
+            msg = `Actually, the violation was Rule ${violation.ruleNum}: ${violation.ruleName || ''}.`;
+        }
     }
 
-    feedback.innerHTML = `
-        <h1 style="font-size: 4rem; margin-bottom: 1rem;">${isCorrect ? "SUSTAINED" : "OVERRULED"}</h1>
-        <p style="font-size: 1.5rem; max-width: 80%;">${detailText}</p>
-    `;
+    showSimFeedback(isSuccess, title, msg);
     
-    document.body.appendChild(feedback);
+    // Save result
+    saveObjectionResult(isSuccess);
 
-    // Save stats
-    App.saveObjectionResult(isCorrect);
-
-    // 4. Resume the simulation after a short delay
-    setTimeout(() => {
-        feedback.remove();
-        playNextLine(); 
-    }, 2500);
+    // Resume
+    State.objection.interval = setTimeout(playNextLine, 3000);
 }
+
 function showSimFeedback(isSuccess, title, msg) {
     const div = document.createElement('div');
     div.className = `p-6 rounded-xl border-2 mb-4 ${isSuccess ? 'border-green-500 bg-green-950/20' : 'border-red-500 bg-red-950/20'}`;
@@ -709,972 +699,847 @@ submitObjection = function (ruleId) {
     originalSubmitObjection(ruleId);
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  REVIEW ROOM — MASTERY HUB
+//  All functions below are exclusively for the #rules-vault section.
+//  No other rooms are touched.
+// ═══════════════════════════════════════════════════════════════════════════
 
-const ReviewState = {
-        activeTab: 'strategy',
-        activeTechnique: 'looping',
-        listenSim: {
-                active: false,
-                lineIndex: 0,
-                utterance: null,
-                score: 0,
-                total: 0
-        },
-        runaway: {
-                scenarioIndex: 0,
-                score: 0,
-                total: 0,
-                active: false
-        },
-        factLab: {
-                neutralized: new Set()
-        },
-        drill: {
-                score: 0,
-                streak: 0,
-                total: 0,
-                timerInterval: null,
-                timerRemaining: 8,
-                answered: false,
-                currentScenarioIdx: -1
-        },
-        rulesMode: 'browse'
-};
+// ── MASTERY PERSISTENCE ──────────────────────────────────────────────────────
+function _rv_saveMastery(key, value) {
+    const p = JSON.parse(localStorage.getItem('rv_mastery') || '{}');
+    p[key] = value;
+    localStorage.setItem('rv_mastery', JSON.stringify(p));
+    updateMasteryScoreDisplay();
+}
 
-// ── Content Data ───────────────────────────────────────────────────────
-const REVIEW_DATA = {
+function _rv_getMastery(key, fallback) {
+    const p = JSON.parse(localStorage.getItem('rv_mastery') || '{}');
+    return p[key] !== undefined ? p[key] : fallback;
+}
 
-    techniques: {
-        looping: {
-            name: "Looping",
-            definition: "Take the witness's own words verbatim from their last answer and embed them directly in your next question. This locks them to their testimony, prevents backtracking, and forces the jury to hear the key phrase twice.",
-            when: "Use on direct when a witness gives a strong, favorable answer you want the jury to anchor on. Use on cross to pin a witness to a damaging admission before moving to the next step.",
-            example: {
-                witness: "Dr. Rowan Hightower",
-                type: "Direct Examination — Plaintiff",
-                dialog: [
-                    { role: "Q", text: "Dr. Hightower, what did your structural analysis reveal about the connections used in the East Superior Tower?" },
-                    { role: "A", text: "My analysis revealed that the bolted shear connections — substituted for the original welded moment connections — significantly reduced the building's lateral stiffness under quartering wind loads.", highlight: null },
-                    { role: "Q", text: "<mark>Those bolted shear connections, substituted for the original welded moment connections</mark> — what standard of care governed the original design at that joint?", highlight: "bolted shear connections, substituted for the original welded moment connections", note: "[LOOP: attorney repeats exact witness language]" },
-                    { role: "A", text: "The original Apex specifications in Exhibit 4 required welded moment connections at every critical joint in the elevated column framework.", highlight: null },
-                    { role: "Q", text: "<mark>Those critical joints in the elevated column framework</mark> — if they had been welded as originally specified, would the quartering wind vulnerability still exist?", highlight: "critical joints in the elevated column framework", note: "[LOOP: second loop, compounds the anchoring]" }
-                ]
-            },
-            tip: "Never paraphrase. 'The bolted connections you mentioned' is not a loop — it's a trap door. The witness's exact words, nothing more."
-        },
-        headlining: {
-            name: "Headlining",
-            definition: "Signal to the jury exactly what topic is coming before you ask the question. Creates structural clarity, builds anticipation, and ensures the jury's attention is primed for the key testimony.",
-            when: "Use at the opening of every major topic transition in direct examination. Especially effective when moving from background to the substance of a witness's testimony.",
-            example: {
-                witness: "Reed Alvarez",
-                type: "Direct Examination — Plaintiff",
-                dialog: [
-                    { role: "Q", text: "Mr. Alvarez, I want to start with your professional background. Can you briefly walk the court through your career before becoming HOA President?" },
-                    { role: "A", text: "Of course. I'm a retired attorney. I earned my Juris Doctor from the University of Miami School of Law and practiced civil litigation for over 30 years." },
-                    { role: "Q", text: "<mark>Now, Mr. Alvarez — I want to leave your background entirely and bring you to a specific moment in March of 2016: the moment you first learned that the East Superior Tower had what engineers would later call a latent structural hazard.</mark> Tell us what happened.", highlight: "Now, Mr. Alvarez — I want to leave your background entirely and bring you to a specific moment in March of 2016: the moment you first learned that the East Superior Tower had what engineers would later call a latent structural hazard.", note: "[HEADLINE: signals topic, creates anticipation, focuses the jury]" },
-                    { role: "A", text: "In March of 2016, I received the whistleblower memo — Exhibit 1. It was from a concerned engineer at Apex. My blood boiled when I read it." }
-                ]
-            },
-            tip: "A headline summarizes the topic, it does not reveal the answer. Think chapter title, not plot spoiler. 'I want to turn to the retrofit vote' — not 'I want to turn to the 51-49 vote that proved residents were divided.'"
-        },
-        scenesetting: {
-            name: "Scene Setting",
-            definition: "Transport the jury to the exact moment in time when a critical event occurred. Establish the physical environment, the sensory details, and the surrounding context before introducing the key fact.",
-            when: "Use before any testimony about a pivotal event, discovery, or confrontation. Gives non-technical testimony credibility and makes the jury feel present.",
-            example: {
-                witness: "Whitley Carter",
-                type: "Direct Examination — Defense",
-                dialog: [
-                    { role: "Q", text: "<mark>Mr. Carter — take us back to the summer of 2014. You're standing at 109 Summit Hill Drive. The East Superior Tower construction site. What does it look like?</mark>", highlight: "Mr. Carter — take us back to the summer of 2014. You're standing at 109 Summit Hill Drive. The East Superior Tower construction site. What does it look like?", note: "[SCENE SET: sensory prompt, transports the jury to the location]" },
-                    { role: "A", text: "It was a massive site. A 30-story steel skeleton rising against the skyline. Cranes, workers, the smell of fresh concrete. Organized. Everything appeared to be in order." },
-                    { role: "Q", text: "And in that environment — that organized, active construction site — what was your specific job that day?" },
-                    { role: "A", text: "I was the assigned city inspector. My responsibility was to verify the structural steel framework complied with the International Building Code." },
-                    { role: "Q", text: "Walk us through what you physically observed during that structural steel inspection.", note: "[Scene now set: every answer carries the weight of a person who was THERE]" }
-                ]
-            },
-            tip: "Ask sensory questions: 'What does it look like? Who is present? What is happening around you?' The jury's imagination is your most powerful tool."
-        },
-        volunteering: {
-            name: "Volunteering Weaknesses",
-            definition: "Proactively raise the opposing side's best attack point during your own direct examination, before opposing counsel can deploy it on cross. Defuse the bomb yourself.",
-            when: "Use when you know opposing counsel has ammunition that could damage your witness's credibility on cross. Taking the hit first on your terms dramatically reduces its impact.",
-            example: {
-                witness: "Dr. Ellis Chen",
-                type: "Direct Examination — Plaintiff",
-                dialog: [
-                    { role: "Q", text: "<mark>Dr. Chen — before we get to your independent findings, I want to address something directly. The wind analysis underlying your opinion was initially performed by a Ph.D. student you were supervising — not by you personally. Is that correct?</mark>", highlight: "I want to address something directly. The wind analysis underlying your opinion was initially performed by a Ph.D. student you were supervising — not by you personally.", note: "[VOLUNTEER: raise the weakness yourself, on your timeline, in a controlled context]" },
-                    { role: "A", text: "That is correct. The original computational model was developed as part of a doctoral dissertation I was advising at Columbia." },
-                    { role: "Q", text: "And at the time those findings were presented to the HOA, that research had not yet completed formal peer review. Also correct?" },
-                    { role: "A", text: "Yes. It was in pre-publication stage at the time." },
-                    { role: "Q", text: "Given those facts — a student model, not yet peer-reviewed — what did you personally do before presenting these findings to Mr. Alvarez and the HOA Board?", note: "[Now the jury hears the strength, not just the weakness]" },
-                    { role: "A", text: "I ran independent wind tunnel tests using my own lab's equipment, confirmed the student's findings point-by-point, and only then presented the results. I would never present speculative research to a homeowners association." }
-                ]
-            },
-            tip: "Your tone must be confident, not apologetic. The message is: 'We know about this. It does not change the conclusion. Here is exactly why.'"
-        },
-        threecs: {
-            name: "Three C's of Impeachment",
-            definition: "Commit → Credit → Confront. First lock the witness firmly to their prior inconsistent statement. Then establish their authority as someone who would have known the truth. Then produce the contradiction.",
-            when: "Use on cross-examination whenever a witness's trial testimony contradicts their prior affidavit, deposition, or written statement. This is your primary impeachment weapon.",
-            example: {
-                witness: "Cam Martinez",
-                type: "Cross-Examination — Defense Witness",
-                dialog: [
-                    { role: "Q", text: "<mark>[COMMIT]</mark> Mr. Martinez — you testified on direct that Metro Builders constructed this building according to the approved plans. Without deviation. Those were your words.", highlight: "COMMIT", note: "[Step 1: Lock them to the prior statement. Precise, calm, no editorializing.]" },
-                    { role: "A", text: "That is correct." },
-                    { role: "Q", text: "And in your own affidavit — your sworn, written statement — you stated that Metro fulfilled its contractual obligations 'fully and without defect.' Those are your words?" },
-                    { role: "A", text: "Yes." },
-                    { role: "Q", text: "<mark>[CREDIT]</mark> You were the lead project manager on this tower. You oversaw every phase of construction. No one knows what Metro Builders did on this project better than you?", highlight: "CREDIT", note: "[Step 2: Elevate their authority. They can't later claim they 'didn't know.']" },
-                    { role: "A", text: "That is fair to say, yes." },
-                    { role: "Q", text: "<mark>[CONFRONT]</mark> Then I am going to ask you to look at this document — the change order, signed by a Metro Builders representative — authorizing the substitution of bolted shear connections for the welded moment connections that appear in the original approved plans. Do you see that?", highlight: "CONFRONT", note: "[Step 3: Produce the contradiction. Say nothing. Let the document speak.]" },
-                    { role: "A", text: "That — that change was approved by Apex Engineering." },
-                    { role: "Q", text: "It was proposed by Metro Builders. Signed by Metro Builders. That is a fact, yes?" }
-                ]
-            },
-            tip: "Never show the document until the witness is completely locked in. The contradiction only lands if they have no escape route. Do not rush Step 1."
-        },
-        chapter: {
-            name: "Chapter Method",
-            definition: "Divide your cross-examination into clearly titled, thematic chapters. Each chapter is a standalone argument. Announce each chapter with a headline. The jury follows you like a book, not a brawl.",
-            when: "Use for any cross-examination covering multiple attack points. Particularly effective against expert witnesses where credibility, methodology, and conclusions are all in play.",
-            example: {
-                witness: "Ash Forrester",
-                type: "Cross-Examination — Defense Expert",
-                dialog: [
-                    { role: "Q", text: "<mark>Dr. Forrester — Chapter One: Your Relationship With Apex.</mark> Your firm has consulted for Apex Engineering on prior projects at least five times in the past fifteen years?", highlight: "Chapter One: Your Relationship With Apex.", note: "[Announce the chapter. The jury knows exactly where you are going.]" },
-                    { role: "A", text: "We have collaborated on several projects over the years, yes." },
-                    { role: "Q", text: "And on each of those engagements, Apex Engineering paid your firm for your services?" },
-                    { role: "A", text: "That is how consulting works." },
-                    { role: "Q", text: "<mark>Chapter Two: The Engineering Record.</mark> You agree that welded moment connections provide greater resistance to lateral loads than bolted shear connections?", highlight: "Chapter Two: The Engineering Record.", note: "[New chapter. Clean break. The jury resets their attention.]" },
-                    { role: "A", text: "In general terms, yes — welded moment connections offer higher lateral stiffness." },
-                    { role: "Q", text: "And the original Apex design specifications called for welded moment connections at the critical elevated column joints?" },
-                    { role: "A", text: "Yes, that was the original specification before the change order." },
-                    { role: "Q", text: "<mark>Chapter Three: The Unnecessary Fix.</mark> You testified that the $22.6 million retrofit was unnecessary. But that retrofit has already been performed. And the building, as retrofitted, is structurally superior to the as-built original — correct?", highlight: "Chapter Three: The Unnecessary Fix.", note: "[Final chapter — the closing argument argument built into cross.]" },
-                    { role: "A", text: "The retrofitted structure is more conservative, yes." },
-                    { role: "Q", text: "So the only real question is whether it needed fixing before the retrofit. And on that question, two licensed engineers with no financial relationship to either party disagree with your conclusion?" }
-                ]
-            },
-            tip: "Each chapter should end on a concession. Do not move to the next chapter until you have the concession you need. Never leave a chapter open-ended."
-        }
+function updateMasteryScoreDisplay() {
+    const p = JSON.parse(localStorage.getItem('rv_mastery') || '{}');
+    const drillCorrect  = p.drillCorrect   || 0;
+    const drillTotal    = Math.max(p.drillTotal || 1, 1);
+    const factsRevealed = p.factsRevealed  || 0;
+    const factsTotal    = Math.max(RV_BAD_FACTS.length, 1);
+    const techViewed    = p.techViewed     || 0;
+    const techTotal     = Math.max(RV_TECHNIQUES.length, 1);
+
+    const pct = Math.min(Math.round(
+        (drillCorrect / drillTotal)    * 40 +
+        (factsRevealed / factsTotal)   * 30 +
+        (techViewed    / techTotal)    * 30
+    ), 100);
+
+    const el = document.getElementById('rv-mastery-score');
+    if (el) el.textContent = pct + '%';
+}
+
+// ── DATA: TECHNIQUE CARDS ────────────────────────────────────────────────────
+const RV_TECHNIQUES = [
+    {
+        id: 'looping', name: 'Looping', color: '#38bdf8', label: 'DIRECT',
+        definition: "Take the witness's own answer and fold it back into your next question, locking them into their testimony and building an unbroken chain of admissions.",
+        witness: 'Dr. Rowan Hightower', role: 'Plaintiff Expert — Structural Engineer',
+        example: [
+            { speaker: 'Counsel', text: 'Dr. Hightower, you testified that the "elevated column" design was the critical structural feature of this building, correct?' },
+            { speaker: 'Witness', text: 'That is correct. The elevated columns distribute lateral load down to the foundation.' },
+            { speaker: 'Counsel', text: 'And those elevated columns — the critical structural feature — were dependent on welded connections for their integrity, weren\'t they?' },
+            { speaker: 'Witness', text: 'Yes. Welded moment connections were specified precisely because of the elevated column design\'s unique lateral load requirements.' },
+            { speaker: 'Counsel', text: 'So the welded connections that the elevated columns depended on — those are the very connections that Apex replaced with bolted shear connections?' },
+        ],
+        tip: "Each question opens with the witness's last key phrase. You loop their words back at them. This makes contradiction impossible without the jury seeing it immediately. Reference: Affidavit of Dr. Rowan Hightower [p. ___]."
     },
+    {
+        id: 'headlining', name: 'Headlining', color: '#a78bfa', label: 'DIRECT',
+        definition: 'Signal a topic transition like a newspaper headline before you enter it — so the jury mentally prepares to receive the information and follows your narrative structure.',
+        witness: 'Reed Alvarez', role: 'Plaintiff Witness — HOA President',
+        example: [
+            { speaker: 'Counsel', text: 'Mr. Alvarez, I want to turn now to the moment everything changed. In March of 2016, you received a document that you described as making your blood boil. Tell the jury what that was.' },
+            { speaker: 'Witness', text: 'The whistleblower memo — Exhibit 1. A concerned engineer from inside Apex confirming that the company had knowingly substituted inferior connections.' },
+            { speaker: 'Counsel', text: "Let's focus now on what you did with that information the moment you had it in your hands. You called Apex directly, correct?" },
+        ],
+        tip: '"I want to turn now to..." · "Let\'s focus on..." · "I want to direct your attention to..." — these are your headline phrases. They create anticipation and let the jury follow your chapter structure. Reference: Affidavit of Reed Alvarez [p. ___].'
+    },
+    {
+        id: 'scene-setting', name: 'Scene Setting', color: '#34d399', label: 'DIRECT',
+        definition: 'Have the witness paint a physical picture of the environment before describing what happened. This activates the jury\'s imagination and makes testimony concrete and vivid.',
+        witness: 'Whitley Carter', role: 'Defense Witness — Retired City Inspector',
+        example: [
+            { speaker: 'Counsel', text: 'Ms. Carter, describe what the East Superior Tower construction site looked like when you arrived to conduct your structural inspection.' },
+            { speaker: 'Witness', text: 'It was a massive 30-story steel skeleton — workers throughout, scaffolding on every level. The framework was fully erected and all connections were visible.' },
+            { speaker: 'Counsel', text: 'What documents did you have with you that day?' },
+            { speaker: 'Witness', text: 'The approved structural drawings, the connection specifications, and my inspection checklist.' },
+            { speaker: 'Counsel', text: 'Standing there, with those drawings in hand, looking directly at those connections — what did your inspection find?' },
+        ],
+        tip: 'The physical setup — documents in hand, standing at the site — gives the jury a movie. Then when you ask the key question, the answer lands inside a fully-realized scene. Reference: Affidavit of Whitley Carter [p. ___].'
+    },
+    {
+        id: 'volunteering', name: 'Volunteering Weaknesses', color: '#fbbf24', label: 'DIRECT',
+        definition: "Bring out a weakness in your own witness BEFORE opposing counsel does. This inoculates the jury and frames the weakness entirely on your terms, stripping opposing counsel of their attack.",
+        witness: 'Dr. Ellis Chen', role: 'Plaintiff Expert — Engineering Professor',
+        example: [
+            { speaker: 'Counsel', text: 'Dr. Chen, the defense will suggest that because you are an academic professor and not a practicing structural engineer, your opinion should be discounted. Is that a fair characterization of your background?' },
+            { speaker: 'Witness', text: 'It is accurate that I hold a tenured research chair at Columbia rather than practice commercially. My work is research-focused — wind tunnel testing, CFD modeling, aerodynamic analysis of tall structures.' },
+            { speaker: 'Counsel', text: 'And the initial quartering wind model was developed by a Ph.D. student under your supervision — not by you personally, correct?' },
+            { speaker: 'Witness', text: 'The student built the initial model. I independently supervised, validated, and verified the entire methodology before any conclusions were drawn.' },
+            { speaker: 'Counsel', text: "So let's talk about what that verification process actually looks like inside a Columbia University wind tunnel lab..." },
+        ],
+        tip: "When opposing counsel later tries to attack Dr. Chen's credentials, the jury has already heard it and already heard the response. The attack lands flat. This converts a liability into a credibility moment. Reference: Affidavit of Dr. Ellis Chen [p. ___]."
+    },
+    {
+        id: 'three-cs', name: "Three C's of Impeachment", color: '#f87171', label: 'CROSS',
+        definition: "Commit the witness to their current testimony. Credit the prior statement as voluntary and sworn. Confront them with the specific contradiction. The order is rigid — never reverse it.",
+        witness: 'Cam Martinez', role: 'Defense Witness — Project Manager, Metro Builders',
+        example: [
+            { speaker: 'Counsel', text: '[COMMIT] Mr. Martinez, you testified today that Metro Builders "followed the approved engineering plans and specifications without deviation" — that is your sworn testimony today, correct?' },
+            { speaker: 'Witness', text: 'That is correct.' },
+            { speaker: 'Counsel', text: '[CREDIT] Sir, you gave a sworn deposition in this case on [p. ___ of your deposition], under oath, with your attorney present, knowing you were required to tell the truth, correct?' },
+            { speaker: 'Witness', text: 'Yes.' },
+            { speaker: 'Counsel', text: '[CONFRONT] In that deposition, you stated — and I am reading directly — "the decision to move to bolted connections was a field call made by our team to address timeline pressures." Those are your words under oath?' },
+        ],
+        tip: 'The page number placeholder is intentional — you must cite the exact page and line number in actual court. Commit first, Credit second, Confront third — reversing the order gives the witness time to explain away the contradiction before the jury hears it. Reference: Affidavit of Cam Martinez [p. ___].'
+    },
+    {
+        id: 'chapter-method', name: 'Chapter Method', color: '#fb923c', label: 'CROSS',
+        definition: 'Organize your cross into distinct chapters — clear topical segments each with a headline, controlled questions, and a planted conclusion that serves your theory of the case.',
+        witness: 'Dr. Ash Forrester', role: 'Defense Expert — Structural Engineer',
+        example: [
+            { speaker: 'Counsel', text: '[CHAPTER 1: BIAS] Dr. Forrester, you have worked directly with Apex Engineering on numerous projects over the past 15 years, correct?' },
+            { speaker: 'Witness', text: 'That is correct.' },
+            { speaker: 'Counsel', text: 'And you were retained and compensated by the defense in this specific case to offer your opinion?' },
+            { speaker: 'Witness', text: 'Yes, I was retained as a consulting expert.' },
+            { speaker: 'Counsel', text: '[CHAPTER 2: PROPENSITY FOR FAILURE] Welded moment connections provide greater lateral load resistance than bolted shear connections under quartering wind scenarios — that is a basic structural engineering principle?' },
+            { speaker: 'Witness', text: 'Under certain loading conditions, yes.' },
+            { speaker: 'Counsel', text: "[CHAPTER 3: UNNECESSARY FIXES] Doctor, the HOA spent $22.6 million on structural retrofits that you called unnecessary and 'driven by optics.' If the building was truly safe, why would a licensed professional engineer order a $22.6 million structural retrofit?" },
+        ],
+        tip: "Each chapter label lives only in your outline — the jury never sees it. Each chapter ends on a point you want planted in their minds. Never let the witness give a speech. Short declarative questions only. Reference: Affidavit of Dr. Ash Forrester [p. ___]."
+    }
+];
 
-    runawayScenarios: [
-        {
-            q: "Mr. Alvarez — when, specifically, did you first receive the whistleblower memo?",
-            evasion: "Well, you know, there were a lot of communications going back and forth at that time, and really what I want to say is that this building had always made me nervous ever since day one and I had been monitoring things for years before this memo ever arrived...",
-            choices: [
-                { text: "Interrupt and ask a completely different question", action: "abandon", correct: false, explanation: "Never abandon mid-answer. You lose control of the examination and signal to opposing counsel — and the jury — that you are rattled." },
-                { text: "Repeat the exact question word-for-word, calmly", action: "repeat", correct: true, explanation: "Correct. Deadpan, unhurried: 'Mr. Alvarez — when, specifically, did you first receive the whistleblower memo?' The jury hears the evasion twice. That is the point." },
-                { text: "Say: 'Please just answer yes or no'", action: "restrict", correct: false, explanation: "This can backfire — the judge may sustain an objection or allow the witness to explain. Repeat the question first. Control through repetition, not restriction." }
-            ]
-        },
-        {
-            q: "Mr. Martinez — Metro Builders proposed the substitution from welded to bolted connections. Yes or no?",
-            evasion: "I think what's really important to understand here is the collaborative nature of the engineering process. Apex ultimately reviewed and approved the change, so to characterize it as being 'proposed by Metro' without any context is really quite unfair to the process that actually took place...",
-            choices: [
-                { text: "Say 'Let me rephrase that question for you'", action: "rephrase", correct: false, explanation: "Rephrasing signals the witness's evasion worked. Never rephrase in response to a deliberate non-answer. That is a concession." },
-                { text: "Repeat the exact question word-for-word, calmly", action: "repeat", correct: true, explanation: "Correct. 'Mr. Martinez — Metro Builders proposed the substitution from welded to bolted connections. Yes or no?' The jury sees the evasion in full light." },
-                { text: "Move on to a new question about the change order", action: "abandon", correct: false, explanation: "This lets the witness completely off the hook on your strongest point. Never move on from a question you haven't gotten an answer to." }
-            ]
-        },
-        {
-            q: "Dr. Forrester — your firm received payment from the defense to prepare your expert report?",
-            evasion: "Expert witnesses are always compensated for their time and expertise, that is simply how the judicial system functions, and I want to be absolutely clear that my opinions are entirely my own and are in no way influenced by any compensation arrangement whatsoever, and I resent any implication to the contrary...",
-            choices: [
-                { text: "Apologize and move on to the next topic", action: "abandon", correct: false, explanation: "Never apologize for a proper question. Apologizing tells the jury you were out of line — you were not." },
-                { text: "Repeat the exact question word-for-word, calmly", action: "repeat", correct: true, explanation: "Correct. 'Dr. Forrester — your firm received payment from the defense to prepare your expert report?' The lengthy, defensive non-answer IS the point. The jury sees it." },
-                { text: "Argue: 'That sounds like bias to me, Doctor'", action: "argue", correct: false, explanation: "Never argue with the witness. They will out-talk you, and the jury dislikes attorneys who bicker. Ask the question. Let the jury draw the inference." }
-            ]
-        }
-    ],
+// ── DATA: RUNAWAY WITNESS ────────────────────────────────────────────────────
+const RV_RUNAWAY_SCENARIOS = [
+    {
+        question: "Mr. Martinez, Metro Builders proposed the substitution from welded to bolted connections — didn't it?",
+        evasions: [
+            "Well, it's more complicated than that. The entire project team was involved in numerous discussions about the design, and Apex Engineering was ultimately responsible for all structural decisions. We simply executed what was approved by the engineers of record.",
+            "I wouldn't characterize it as a proposal. It was a collaborative process between our field team and Apex that unfolded over several months of project review.",
+            "I have already addressed this. Metro Builders followed the approved plans."
+        ],
+        techniqueLabel: 'Ask → Repeat → Repeat (Assert Control)',
+        finalLine: "Mr. Martinez, the question requires a yes or no: did Metro Builders propose the substitution from welded to bolted connections?"
+    },
+    {
+        question: "Dr. Forrester, welded moment connections provide greater lateral load resistance than bolted shear connections — correct?",
+        evasions: [
+            "That depends on many factors — specific loading conditions, connection geometry, bolt grade, whether we're discussing static or dynamic loads, and the overall structural system. In some configurations—",
+            "Both connection types can be engineered to meet code requirements if properly specified. The comparison requires significant qualification—",
+            "I would need to qualify that answer considerably. The engineering literature on connection performance is quite nuanced."
+        ],
+        techniqueLabel: 'Ask → Repeat → Repeat (Demand the Admission)',
+        finalLine: "Doctor — under quartering wind loading conditions like those identified in this case — yes or no?"
+    }
+];
 
-    badFacts: [
-        {
-            fact: "The East Superior Tower passed city inspection and received a Certificate of Occupancy in 2014.",
-            context: "Whitley Carter signed off on the structural steel framework — including the bolted connections — and issued the Certificate of Occupancy upon project completion.",
-            neutralizer: "Code compliance is the floor, not the ceiling. A Certificate of Occupancy confirms the building met minimum standards — it does not certify it was optimally designed. The inspection was conducted without knowledge of the quartering wind vulnerability because no dynamic wind load analysis was required by code at the time. Minimum compliance with a code that did not require this specific analysis cannot immunize Apex's design decision.",
-            plaintiff_counter: "For plaintiff: The CO was issued without the full picture. Whitley Carter was not provided the change order documentation. The approved plans Carter inspected were already the compromised plans. Compliance with deficient plans is not exoneration.",
-            exhibit_link: "Exhibit 7 — Final Inspection Report & Certificate of Occupancy"
-        },
-        {
-            fact: "The HOA retrofit vote was only 51% to 49% — nearly half of all unit owners voted against it.",
-            context: "Reed Alvarez acknowledges the narrow margin. The defense will use this to suggest an overreaction or that the structural concern was not universally accepted.",
-            neutralizer: "The 49% who voted against the retrofit were voting against the financial burden — not against the engineering science. Every expert who reviewed the structural data supported the finding. No opposing expert testified the building was safe as built. The narrow vote reflects the $22.6M cost, not scientific disagreement.",
-            plaintiff_counter: "For plaintiff: A majority of people living in a structurally vulnerable building voted to fix it, even knowing the cost. That is not overreaction. That is informed decision-making under extraordinary circumstances.",
-            exhibit_link: "Exhibit 8 — Emergency HOA Meeting Minutes, March 14, 2016"
-        },
-        {
-            fact: "The emergency retrofit cost $22.6 million — a sum borne by unit owners.",
-            context: "The defense may argue this cost demonstrates the plaintiff's theory is economically motivated, or that the HOA overreacted and created costs unnecessarily.",
-            neutralizer: "The $22.6M is not evidence against the plaintiff — it is the measure of the defendants' harm. The greater the cost to correct the deficiency, the more serious the deficiency. Apex's decision to substitute weaker connections created a problem requiring $22.6M to correct. Every dollar of that cost originates from Apex's engineering decision.",
-            plaintiff_counter: "For plaintiff: Every one of those 22.6 million dollars came from the pockets of homeowners who had no part in the engineering decision. This is not the HOA's debt. It is the cost Apex imposed on innocent people.",
-            exhibit_link: "Exhibit 10 — Structural Retrofit Invoice"
-        },
-        {
-            fact: "Dr. Chen's wind analysis originated with a Ph.D. student's dissertation — unpublished and not peer-reviewed at the time of disclosure.",
-            context: "The defense will characterize the foundational science behind the plaintiff's case as unverified graduate student work, not established research.",
-            neutralizer: "The student model was the alarm. Three independent credentialed experts confirmed the fire. Dr. Chen ran independent wind tunnel tests using university-grade equipment and confirmed the findings personally. Dr. Hightower — a dual-doctorate licensed PE with 25+ years of experience — independently verified the resonance effect. The study's preliminary status did not prevent expert verification.",
-            plaintiff_counter: "For plaintiff: If the science was speculative, why did Apex's own engineer Samuel Greene write the whistleblower memo at all? Their internal warning preceded any outside research. The graduate model confirmed what Apex already knew and concealed.",
-            exhibit_link: "Exhibit 2 — Executive Summary (Dr. Chen); Exhibit 4 — Dr. Hightower's Report"
-        },
-        {
-            fact: "Cam Martinez testified that Metro Builders 'fulfilled its contractual obligations fully and without defect.'",
-            context: "The defense position is that Metro simply executed what Apex approved — a contractor following engineer-approved plans bears no independent responsibility.",
-            neutralizer: "Metro did not simply follow plans — Metro proposed the substitution. The change from welded to bolted connections was initiated by Metro Builders and executed under a change order Metro signed. Metro cannot simultaneously claim credit for cost savings from a substitution they proposed and disclaim responsibility for its structural consequences.",
-            plaintiff_counter: "For plaintiff: Use the Three C's here. Commit Martinez to 'no deviation.' Credit him as lead project manager. Confront him with the signed change order. The contradiction is in his own documents.",
-            exhibit_link: "Change order documentation, construction records"
-        }
-    ],
+// ── DATA: BAD FACTS ──────────────────────────────────────────────────────────
+const RV_BAD_FACTS = [
+    {
+        id: 'bf1', label: 'Defense Fact',
+        bad: "The East Superior Residential Tower is still standing today. It has not collapsed.",
+        neutralize: "Structural danger does not require collapse to constitute negligence. A gun with a defective safety is dangerous even before it fires. The $22.6M retrofit itself is the professional confirmation that the danger was real — engineers don't spend $22.6 million on 'optics.'"
+    },
+    {
+        id: 'bf2', label: 'Defense Fact',
+        bad: "City Inspector Whitley Carter reviewed the construction and issued a Certificate of Occupancy.",
+        neutralize: "Carter's inspection was a code-compliance check — not a quartering wind analysis. She admitted she was never provided with the change order documentation showing the bolt substitution. The code is a floor, not a ceiling, and it cannot certify against risks it was never designed to evaluate."
+    },
+    {
+        id: 'bf3', label: 'Weak Plaintiff Fact',
+        bad: "The HOA vote to proceed with retrofits passed by only 51% to 49%. Nearly half of residents disagreed.",
+        neutralize: "The vote threshold is irrelevant to liability. Engineers do not require majority votes on safety determinations. Dr. Hightower's professional opinion of danger was not 51/49 — it was unambiguous. A split board vote cannot override a PE's sworn finding."
+    },
+    {
+        id: 'bf4', label: 'Weak Plaintiff Fact',
+        bad: "Dr. Chen's wind analysis was built on a graduate student's unpublished, non-peer-reviewed paper.",
+        neutralize: "Dr. Chen supervised and independently verified the entire methodology using Columbia University's wind tunnel facilities. Dr. Rowan Hightower — an independent PE with no connection to Chen — arrived at the same conclusions independently. Two separate experts, two separate paths, one finding."
+    },
+    {
+        id: 'bf5', label: 'Defense Attack on Plaintiff',
+        bad: "The Whistleblower Memo (Exhibit 1) comes from Samuel Greene, a disgruntled former Apex employee.",
+        neutralize: "The memo's factual content — that Apex approved a bolt substitution with knowledge of the wind implications — was independently verified by two separate expert engineers who had no contact with Greene whatsoever. The messenger's motivation does not alter the accuracy of the message."
+    },
+    {
+        id: 'bf6', label: 'Defense Fact',
+        bad: "Metro Builders had a written, Apex-approved change order authorizing the substitution to bolted connections.",
+        neutralize: "A change order transfers paperwork, not liability. If Apex approved an unsafe substitution, Apex is liable for approving it. If Metro proposed it to reduce costs and timeline, Metro is liable for proposing it. Having a signed document authorizing a negligent decision does not erase the negligence."
+    },
+    {
+        id: 'bf7', label: 'Defense Attack on Plaintiff',
+        bad: "Dr. Rowan Hightower is being compensated as a paid expert witness for the plaintiff.",
+        neutralize: "Expert compensation is universal, disclosed, and permitted. The defense's own expert, Dr. Ash Forrester, is also compensated — and has a 15-year working relationship with defendant Apex Engineering. Both experts are paid; only one has a pre-existing financial relationship with a defendant in this case."
+    },
+    {
+        id: 'bf8', label: 'Defense Fact',
+        bad: "Bolted shear connections are used throughout the high-rise construction industry and met applicable building codes.",
+        neutralize: "Meeting minimum code does not satisfy the professional standard of care when the engineer knows those connections are specifically inadequate for this building's unique aerodynamic conditions. Critically, Apex's own original design specified welded connections — meaning Apex itself knew bolted was the inferior choice for this structure before they approved the substitution."
+    }
+];
 
-    battleDrills: [
-        {
-            scenario: "\"You heard the contractor tell the inspector that the building had structural problems, right?\"",
-            speaker: "Attorney to Witness",
-            correct: "802",
-            distractors: ["602", "403", "701"],
-            explanation: "Hearsay (Rule 802). The contractor's statement is out-of-court, offered to prove the building had structural problems — i.e., offered for its truth.",
-            tip: "Ask: out-of-court statement + offered for its truth? Yes → Rule 802."
-        },
-        {
-            scenario: "\"In my opinion as a homeowner, the bolted connections were definitely structurally deficient.\"",
-            speaker: "Reed Alvarez — Witness",
-            correct: "701",
-            distractors: ["802", "403", "611"],
-            explanation: "Improper Lay Opinion (Rule 701). Alvarez is a retired attorney and HOA president. Assessing whether structural connections are 'deficient' requires specialized engineering expertise — not everyday experience.",
-            tip: "Can a reasonable person form this opinion from everyday experience alone? No technical expertise required → probably fine. Specialized knowledge needed → Rule 701."
-        },
-        {
-            scenario: "\"Metro Builders has always cut corners on every project they've built. That's just who they are.\"",
-            speaker: "Plaintiff's Lawyer",
-            correct: "404",
-            distractors: ["802", "403", "602"],
-            explanation: "Improper Character Evidence (Rule 404). This uses prior conduct (past corner-cutting) to prove propensity — they did it before, they did it here. Textbook Rule 404 violation.",
-            tip: "Is it arguing 'they did it before, so they did it again'? Propensity reasoning = Rule 404."
-        },
-        {
-            scenario: "\"So you agree the building was structurally compromised, don't you?\" [asked on direct examination]",
-            speaker: "Plaintiff's Lawyer to Dr. Hightower — Direct Exam",
-            correct: "611",
-            distractors: ["701", "403", "802"],
-            explanation: "Leading Question on Direct (Rule 611). The question suggests the desired answer ('you agree... don't you?') and is asked during direct examination of the lawyer's own witness.",
-            tip: "Does it contain the answer? Is this direct exam of your own witness? Both yes → Rule 611."
-        },
-        {
-            scenario: "\"Apex Engineering is a corrupt organization that has destroyed this community and deserves to lose everything they own.\"",
-            speaker: "Plaintiff's Lawyer",
-            correct: "403",
-            distractors: ["404", "802", "611"],
-            explanation: "Rule 403 — Prejudicial. The statement inflames the jury's emotions ('corrupt... destroy... lose everything') with no additional probative value beyond what admissible evidence already provides.",
-            tip: "Does this add facts OR just stoke emotion? Pure inflammatory language with minimal factual addition = Rule 403 analysis."
-        },
-        {
-            scenario: "\"I never reviewed the original drawings myself, but I know for a fact the engineers ignored the safety warnings.\"",
-            speaker: "Reed Alvarez — Witness",
-            correct: "602",
-            distractors: ["802", "701", "404"],
-            explanation: "Lack of Personal Knowledge (Rule 602). Alvarez asserts knowledge ('I know for a fact') that he admits he has no direct basis for ('never reviewed the original drawings'). Classic Rule 602.",
-            tip: "Listen for: 'I believe,' 'I assume,' 'everyone knows,' 'I heard.' No direct experience → Rule 602."
-        },
-        {
-            scenario: "\"My neighbor told me that her contractor friend overheard the city inspector say he was pressured to approve the building.\"",
-            speaker: "Witness",
-            correct: "805",
-            distractors: ["802", "602", "613"],
-            explanation: "Double Hearsay (Rule 805). Two out-of-court links: the inspector said it (Layer 1), the contractor overheard it (Layer 2), the neighbor repeated it (Layer 3). Every link in the chain needs an exception.",
-            tip: "Count the chain: Who said it to whom? Two or more out-of-court links = Double Hearsay = Rule 805."
-        },
-        {
-            scenario: "\"Dr. Chen is an absolute genius who has never been wrong about anything in her entire career.\"",
-            speaker: "Witness — before Dr. Chen's credibility has been attacked at all",
-            correct: "608",
-            distractors: ["702", "403", "701"],
-            explanation: "Improper Bolstering (Rule 608). You may support a witness's credibility only after it has been attacked. Pre-emptively vouching for a witness before any attack = impermissible bolstering.",
-            tip: "Has credibility been attacked yet? No → bolstering = Rule 608. Yes → supporting credibility is proper."
-        },
-        {
-            scenario: "\"Isn't it true that you've been sued for engineering malpractice before, Dr. Hightower?\"",
-            speaker: "Defense Lawyer to Dr. Hightower — Cross-Exam",
-            correct: "404",
-            distractors: ["608", "609", "403"],
-            explanation: "Improper Character Evidence (Rule 404). Prior civil lawsuits are being offered to suggest Hightower is prone to engineering errors — propensity reasoning. Rule 609 covers criminal convictions only, not civil suits.",
-            tip: "Prior civil lawsuits ≠ criminal convictions. Rule 609 is criminal convictions only. Using past suits to show propensity for negligence = Rule 404."
-        },
-        {
-            scenario: "\"The wind tunnel data proves beyond any doubt that this building will definitely collapse in the very next storm.\"",
-            speaker: "Plaintiff's Lawyer — closing argument on evidence",
-            correct: "403",
-            distractors: ["702", "701", "611"],
-            explanation: "Rule 403. While expert structural opinions are admissible, the absolute certitude ('proves beyond any doubt... definitely collapse in the very next storm') overstates the evidence and is calculated to inflame rather than inform.",
-            tip: "Does this statement go beyond what the actual evidence supports AND is designed to inflame emotion? Rule 403 weighing analysis."
-        }
-    ],
+// ── DATA: BATTLE DRILLS ──────────────────────────────────────────────────────
+const RV_BATTLE_DRILLS = [
+    {
+        scenario: 'On direct examination, counsel asks Reed Alvarez:\n"Mr. Alvarez, it was expensive to live in this dangerous building, wasn\'t it?"',
+        correctRule: '611',
+        explanation: "Counsel is suggesting the answer on direct examination ('it was expensive'). Leading questions are permitted on cross, but not direct — unless developing the witness or the witness is hostile.",
+        distractors: ['802', '403', '602']
+    },
+    {
+        scenario: 'A witness testifies:\n"I heard from my neighbor, who heard from one of the contractors, that the city inspector was paid off."',
+        correctRule: '805',
+        explanation: "Double Hearsay. The neighbor's statement is hearsay (layer 1). The contractor's embedded statement is a second layer of hearsay. Each layer independently needs an exception under Rule 805.",
+        distractors: ['802', '602', '404']
+    },
+    {
+        scenario: 'A HOA resident testifies on direct:\n"In my opinion as a homeowner, the steel framework was structurally defective."',
+        correctRule: '701',
+        explanation: "A lay witness cannot offer technical structural engineering opinions. 'Structurally defective' requires specialized knowledge under Rule 702 — only a qualified expert may make that determination.",
+        distractors: ['611', '403', '602']
+    },
+    {
+        scenario: 'Counsel states in closing argument:\n"Apex Engineering are corrupt criminals who have destroyed this community and deserve to lose everything."',
+        correctRule: '403',
+        explanation: "This inflammatory language has minimal probative value and is substantially outweighed by the danger of unfair prejudice. 'Corrupt criminals' without supporting evidence is the textbook Rule 403 violation.",
+        distractors: ['404', '802', '701']
+    },
+    {
+        scenario: 'Defense counsel asks Dr. Hightower on cross:\n"Doctor, isn\'t it true you were previously accused of negligence in another case?"',
+        correctRule: '404',
+        explanation: "Prior bad act evidence offered to show propensity — because Dr. Hightower was negligent before, he must be wrong now. That is precisely the inference Rule 404(b) prohibits. MIMIC exceptions do not apply here.",
+        distractors: ['608', '609', '403']
+    },
+    {
+        scenario: 'Cam Martinez testifies:\n"I didn\'t see the change order myself, but everyone at Metro knows it was rushed through under pressure from Apex."',
+        correctRule: '602',
+        explanation: "'Everyone knows' is not personal knowledge — it is speculation and rumor. The witness must testify only to matters they personally perceived. 'Everyone knows' equals no personal knowledge.",
+        distractors: ['802', '701', '404']
+    },
+    {
+        scenario: 'On direct examination of Dr. Ash Forrester:\n"Dr. Chen is a genius who never makes engineering mistakes — you would agree with that, wouldn\'t you?"',
+        correctRule: '608',
+        explanation: "This bolsters Dr. Chen's credibility as a witness before it has been attacked by opposing counsel. Rule 608 permits credibility support only in response to a prior attack — you cannot preemptively bolster.",
+        distractors: ['701', '702', '403']
+    },
+    {
+        scenario: 'Whitley Carter testifies:\n"The project manager told me the change order was fully approved by Apex, so I signed off on the final inspection."',
+        correctRule: '802',
+        explanation: "Carter is repeating an out-of-court statement made by the project manager, offered to prove the truth of that statement — that the change order was in fact approved by Apex. Classic hearsay.",
+        distractors: ['602', '701', '805']
+    },
+    {
+        scenario: 'Defense counsel cross-examines Dr. Hightower:\n"Doctor, isn\'t Apex just a company whose culture is to always put profit before people?"',
+        correctRule: '404',
+        explanation: "Asking about Apex's 'culture' of prioritizing profit is character evidence offered to show they acted in conformity with that character in this specific case — the exact prohibited inference under Rule 404(a).",
+        distractors: ['403', '611', '602']
+    },
+    {
+        scenario: 'Reed Alvarez testifies:\n"My sister called me and said she read on a blog that the building was structurally dangerous, and that\'s what prompted me to contact Dr. Chen."',
+        correctRule: '802',
+        explanation: "Alvarez is repeating what his sister said (hearsay, layer 1) who was repeating what she read on a blog (hearsay, layer 2). If offered to prove the building was dangerous, this is 805 Double Hearsay. If offered only to explain why Alvarez acted, it may be non-hearsay — context matters.",
+        distractors: ['805', '602', '404']
+    }
+];
 
-    listenSegment: [
-        { speaker: "Q", text: "Mr. Alvarez — I want to turn to a specific moment. Let me take you back to March 2016. You're in your home at East Superior Tower. Your phone rings. Tell us what happened.", technique: null, label: null },
-        { speaker: "A", text: "It was a call from Dr. Chen — a professor at Columbia. She told me a graduate student had identified a potential structural problem with the building.", technique: null, label: null },
-        { speaker: "Q", text: "A potential structural problem with the building — what did you do the moment you heard those words?", technique: "looping", label: "LOOPING" },
-        { speaker: "A", text: "Honestly, my blood ran cold. Within an hour, I had called Apex Engineering and demanded a meeting. Within a week, I had retained Dr. Hightower.", technique: null, label: null },
-        { speaker: "Q", text: "Now — leaving that initial reaction — I want to turn to the HOA vote itself. When you brought this to your fellow unit owners, what did you tell them?", technique: "headlining", label: "HEADLINING" },
-        { speaker: "A", text: "I told them the truth. Two independent engineers believed the building had a structural vulnerability that needed to be fixed. I said: this is our building. Our homes. We need to fix it.", technique: null, label: null },
-        { speaker: "Q", text: "Mr. Alvarez — before we go further, I want to address something the defense will surely raise. The vote was 51 to 49. Nearly half of your neighbors voted no. You knew that would come up today, correct?", technique: "volunteering", label: "VOLUNTEERING WEAKNESS" },
-        { speaker: "A", text: "Yes. And I will tell you exactly what that vote means: the 49 percent were voting against the cost — not against the engineering. Not a single expert who reviewed the data said the building was safe.", technique: null, label: null },
-        { speaker: "Q", text: "The cost. The $22.6 million. That cost — where did that money come from?", technique: "looping", label: "LOOPING" },
-        { speaker: "A", text: "It came from the pockets of every homeowner in that building. Ordinary people. People who had nothing to do with the engineering decision. That is the most infuriating part of all of this.", technique: null, label: null }
-    ]
+// ── DATA: AUDIO SEGMENTS ─────────────────────────────────────────────────────
+const RV_AUDIO_SEGMENTS = [
+    {
+        lines: [
+            { speaker: 'Counsel', text: "Dr. Hightower, I want to turn now to the connection substitution — that is the central issue in this case, isn't it?" },
+            { speaker: 'Witness', text: 'Yes. The substitution from welded moment connections to bolted shear connections is the key structural change at issue.' },
+            { speaker: 'Counsel', text: 'The welded moment connections — those are the connections that the original Apex design specified for the elevated columns, correct?' },
+            { speaker: 'Witness', text: 'That is correct. Welded connections were specified because of the elevated column design\'s unique lateral load requirements.' },
+            { speaker: 'Counsel', text: "And those unique lateral load requirements — those are exactly what make this building vulnerable under quartering wind conditions?" },
+        ],
+        technique: 'Looping',
+        hint: "Every question opens with the witness's last key phrase. 'The welded moment connections...' → 'Those unique lateral load requirements...' — each answer becomes the next question."
+    },
+    {
+        lines: [
+            { speaker: 'Counsel', text: "Mr. Alvarez, I want to turn now to the moment everything changed. You received a document that you described as making your blood boil. Tell the jury what that was." },
+            { speaker: 'Witness', text: "It was the whistleblower memo — Exhibit 1. An Apex engineer confirming they had knowingly approved inferior connections." },
+            { speaker: 'Counsel', text: "Let's focus now on what you did in the immediate hours after you read that memo. You called Apex directly, correct?" },
+        ],
+        technique: 'Headlining',
+        hint: '"I want to turn now to..." and "Let\'s focus now on..." are the headline signals. They give the jury a chapter title before each topic, helping them follow your narrative map.'
+    },
+    {
+        lines: [
+            { speaker: 'Counsel', text: 'Ms. Carter, take us back to the day of your structural inspection. Describe what the East Superior Tower construction site looked like when you arrived.' },
+            { speaker: 'Witness', text: 'A massive 30-story steel skeleton — fully erected, workers and scaffolding throughout. Every connection was accessible.' },
+            { speaker: 'Counsel', text: 'What documents did you have with you that day?' },
+            { speaker: 'Witness', text: 'The approved structural drawings, connection specifications, and my inspection checklist.' },
+            { speaker: 'Counsel', text: 'Standing there — with those approved drawings in your hands, looking directly at those connections — what did your inspection find?' },
+        ],
+        technique: 'Scene Setting',
+        hint: "Counsel builds the physical scene first — the location, the documents, the witness's position — THEN asks the key question. The answer lands inside a vivid, concrete picture the jury can see."
+    }
+];
 
-};
+// ── STATE ────────────────────────────────────────────────────────────────────
+let _rvAudioState  = { segIdx: 0, lineIdx: 0, detected: false, score: 0, total: 0 };
+let _rvDrillState  = { idx: 0, score: 0, total: 0, answered: false, order: [] };
+let _rvRunawayState = { scenarioIdx: 0, evasionIdx: 0 };
 
-// ── MAIN INIT ──────────────────────────────────────────────────────────
-function initRulesVault() {
-        navigateTo('rules-vault');
-        logAction("Accessed Review Room");
+// ── TAB NAVIGATION ───────────────────────────────────────────────────────────
+function switchReviewTab(tab) {
+    document.querySelectorAll('.rv-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.rv-panel').forEach(p => p.classList.remove('active'));
 
-        // Load mastery badge
-        _rv_updateMasteryBadge();
+    const tabEl   = document.querySelector(`.rv-tab[onclick="switchReviewTab('${tab}')"]`);
+    const panelEl = document.getElementById(`rv-panel-${tab}`);
 
-        // Default to strategy tab
-        switchReviewTab('strategy', document.querySelector('.rv-tab'));
+    if (tabEl)   tabEl.classList.add('active');
+    if (panelEl) panelEl.classList.add('active');
 
-        // Pre-load rules list (for when user navigates to rules tab)
-        _rv_renderRulesList();
+    _rv_saveMastery('lastTab', tab);
 }
 
-// ── Tab Navigation ─────────────────────────────────────────────────────
-function switchReviewTab(tab, el) {
-        // Update tab buttons
-        document.querySelectorAll('.rv-tab').forEach(t => t.classList.remove('active'));
-        if (el) el.classList.add('active');
-        else {
-                const allTabs = document.querySelectorAll('.rv-tab');
-                const idx = ['strategy','toolkit','factlab','rules'].indexOf(tab);
-                if (allTabs[idx]) allTabs[idx].classList.add('active');
-        }
-
-        // Update panes
-        document.querySelectorAll('.rv-pane').forEach(p => p.classList.remove('active'));
-        const pane = document.getElementById('rv-' + tab);
-        if (pane) pane.classList.add('active');
-
-        ReviewState.activeTab = tab;
-
-        // Tab-specific init
-        if (tab === 'toolkit') _rv_initToolkit();
-        if (tab === 'factlab') _rv_initFactLab();
-        if (tab === 'rules') _rv_initRulesTab();
-
-        // Track visit
-        _rv_trackTabVisit(tab);
+// ── STRATEGY DECK ────────────────────────────────────────────────────────────
+function toggleStrategyCard(el) {
+    el.classList.toggle('expanded');
+    const arrow = el.querySelector('.gold-text.text-base');
+    if (arrow) arrow.textContent = el.classList.contains('expanded') ? '▾' : '▸';
 }
 
-// ── Strategy Tab ───────────────────────────────────────────────────────
-function toggleAuraCard(el) {
-        el.classList.toggle('open');
+// Listen to Strategy
+function startListenToStrategy() {
+    _rvAudioState = { segIdx: 0, lineIdx: 0, detected: false, score: 0, total: 0 };
+
+    const btn  = document.getElementById('rv-audio-btn');
+    const feed = document.getElementById('rv-audio-feed');
+    const det  = document.getElementById('rv-audio-detect');
+    const scoreEl = document.getElementById('rv-audio-score');
+
+    if (btn)     { btn.textContent = 'PLAYING...'; btn.disabled = true; }
+    if (feed)    { feed.innerHTML = ''; feed.classList.remove('hidden'); }
+    if (det)     det.classList.add('hidden');
+    if (scoreEl) scoreEl.classList.add('hidden');
+
+    _rv_playAudioLine();
 }
 
-// ── Toolkit Tab ────────────────────────────────────────────────────────
-function _rv_initToolkit() {
-        loadTechnique('looping', document.querySelector('.rv-tech-btn'));
-        _rv_initRunaway();
+function _rv_playAudioLine() {
+    const seg = RV_AUDIO_SEGMENTS[_rvAudioState.segIdx];
+    if (!seg) { _rv_endAudio(); return; }
+
+    if (_rvAudioState.lineIdx >= seg.lines.length) {
+        _rv_showAudioDetect(seg);
+        return;
+    }
+
+    const line = seg.lines[_rvAudioState.lineIdx];
+    const feed = document.getElementById('rv-audio-feed');
+    if (!feed) return;
+
+    const div = document.createElement('div');
+    div.className = 'audio-line';
+    const speakerClass = line.speaker === 'Counsel' ? 'gold-text' : 'text-blue-400';
+    div.innerHTML = `<span class="font-bold text-[10px] uppercase tracking-wider ${speakerClass}">${line.speaker}: </span><span class="text-white/80">${line.text}</span>`;
+    feed.appendChild(div);
+
+    setTimeout(() => div.classList.add('lit'), 60);
+    setTimeout(() => div.classList.remove('lit'), 2100);
+
+    _rvAudioState.lineIdx++;
+    setTimeout(_rv_playAudioLine, 2400);
 }
 
-function loadTechnique(key, el) {
-        // Update button states
-        document.querySelectorAll('.rv-tech-btn').forEach(b => b.classList.remove('active'));
-        if (el) el.classList.add('active');
+function _rv_showAudioDetect(seg) {
+    const det  = document.getElementById('rv-audio-detect');
+    const btns = document.getElementById('rv-audio-btns');
+    const fb   = document.getElementById('rv-audio-feedback');
 
-        ReviewState.activeTechnique = key;
-        const tech = REVIEW_DATA.techniques[key];
-        if (!tech) return;
+    if (!det || !btns) return;
 
-        const panel = document.getElementById('rv-tech-panel');
-        if (!panel) return;
+    det.classList.remove('hidden');
+    if (fb) fb.classList.add('hidden');
+    btns.innerHTML = '';
 
-        // Build dialog HTML
-        let dialogHTML = '';
-        tech.example.dialog.forEach(line => {
-                const isQ = line.role === 'Q';
-                let textContent = line.text;
+    // Build shuffled options (all 6 technique names)
+    const choices = RV_TECHNIQUES.map(t => t.name).sort(() => Math.random() - 0.5);
+    // Ensure correct answer is present (it always is since we use all 6)
+    choices.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'strategy-detect-btn';
+        btn.textContent = name.toUpperCase();
+        const fire = (e) => { e.preventDefault(); _rv_checkAudio(name, seg, btn, btns); };
+        btn.addEventListener('click', fire);
+        btn.addEventListener('touchend', fire);
+        btns.appendChild(btn);
+    });
+}
 
-                // Highlight loop/headline markers
-                if (line.highlight) {
-                        const safeHL = line.highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        textContent = textContent.replace(new RegExp(safeHL, 'i'), `<span class="rv-loop-highlight">${line.highlight}</span>`);
-                }
-                // Strip <mark> tags if present and replace with highlight span
-                textContent = textContent.replace(/<mark>(.*?)<\/mark>/g, '<span class="rv-loop-highlight">$1</span>');
+function _rv_checkAudio(chosen, seg, clickedBtn, btnsEl) {
+    if (_rvAudioState.detected) return;
+    _rvAudioState.detected = true;
+    _rvAudioState.total++;
 
-                dialogHTML += `
-                    <div class="rv-dialog-line ${isQ ? 'rv-dialog-q' : 'rv-dialog-a'}">
-                        <span class="rv-dialog-role">${line.role}</span>
-                        <div>
-                            <span>${textContent}</span>
-                            ${line.note ? `<div class="rv-technique-note">${line.note}</div>` : ''}
-                        </div>
-                    </div>`;
+    const correct = chosen === seg.technique;
+    if (correct) _rvAudioState.score++;
+
+    clickedBtn.classList.add(correct ? 'detected' : 'miss');
+    if (!correct) {
+        btnsEl.querySelectorAll('.strategy-detect-btn').forEach(b => {
+            if (b.textContent === seg.technique.toUpperCase()) b.classList.add('detected');
         });
+    }
 
-        panel.innerHTML = `
-            <div class="flex justify-between items-start mb-3 flex-wrap gap-2">
-                <h3 style="font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; color:var(--gold);">${tech.name}</h3>
-                <span style="font-size:0.65rem; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-muted); background:rgba(255,255,255,0.07); padding:3px 10px; border-radius:50px;">${tech.example.type}</span>
+    const fb = document.getElementById('rv-audio-feedback');
+    if (fb) {
+        fb.classList.remove('hidden');
+        fb.className = `mt-3 text-xs p-3 rounded-lg leading-relaxed ${correct ? 'bg-green-950/30 border border-green-500/20' : 'bg-red-950/30 border border-red-500/20'}`;
+        fb.innerHTML = `<span class="font-bold ${correct ? 'text-green-400' : 'text-red-400'}">${correct ? 'Correct.' : 'Technique was: ' + seg.technique}</span> ${seg.hint}`;
+    }
+
+    setTimeout(() => {
+        _rvAudioState.segIdx++;
+        _rvAudioState.lineIdx = 0;
+        _rvAudioState.detected = false;
+        const det = document.getElementById('rv-audio-detect');
+        if (det) det.classList.add('hidden');
+        if (_rvAudioState.segIdx >= RV_AUDIO_SEGMENTS.length) {
+            _rv_endAudio();
+        } else {
+            _rv_playAudioLine();
+        }
+    }, 2800);
+}
+
+function _rv_endAudio() {
+    const btn = document.getElementById('rv-audio-btn');
+    if (btn) { btn.textContent = 'REPLAY'; btn.disabled = false; btn.onclick = startListenToStrategy; }
+    const scoreEl = document.getElementById('rv-audio-score');
+    if (scoreEl) {
+        scoreEl.classList.remove('hidden');
+        scoreEl.textContent = `Session: ${_rvAudioState.score} / ${_rvAudioState.total} techniques identified correctly`;
+    }
+}
+
+// ── TECHNIQUE CARDS ──────────────────────────────────────────────────────────
+function buildTechniqueCards() {
+    const container = document.getElementById('rv-technique-cards');
+    if (!container) return;
+    container.innerHTML = '';
+
+    RV_TECHNIQUES.forEach((tech, i) => {
+        const exHTML = tech.example.map(line => {
+            const sc = line.speaker === 'Counsel' ? 'gold-text' : 'text-blue-400';
+            const bc = line.speaker === 'Counsel' ? 'border-gold/50' : 'border-blue-400/30';
+            return `<div class="mb-2 pl-3 border-l-2 ${bc}">
+                <span class="text-[10px] font-bold uppercase tracking-wider ${sc}">${line.speaker}: </span>
+                <span class="text-xs text-white/80">${line.text}</span>
+            </div>`;
+        }).join('');
+
+        const div = document.createElement('div');
+        div.className = 'technique-card';
+        div.innerHTML = `
+            <div class="technique-header" onclick="toggleTechnique(this,${i})">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${tech.color}"></div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-bold">${tech.name}</span>
+                            <span class="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded font-bold flex-shrink-0"
+                                  style="background:${tech.color}1a; color:${tech.color}; border:1px solid ${tech.color}44;">${tech.label}</span>
+                        </div>
+                        <div class="text-[10px] text-muted truncate">${tech.witness} — ${tech.role}</div>
+                    </div>
+                </div>
+                <div class="text-muted text-sm flex-shrink-0 ml-2">▸</div>
             </div>
-            <div class="rv-tech-definition">${tech.definition}</div>
-            <p class="rv-tech-when"><strong style="color:var(--text-main);">When to use:</strong> ${tech.when}</p>
-            <div class="rv-tech-example-header">Case Example — ${tech.example.witness}</div>
-            <div class="rv-tech-dialog">${dialogHTML}</div>
-            <div class="rv-tech-tip">${tech.tip}</div>
+            <div class="technique-body" id="tech-body-${i}">
+                <p class="text-xs text-muted leading-relaxed mb-4">${tech.definition}</p>
+                <div class="text-[10px] uppercase tracking-widest text-muted mb-2 font-bold">Case Example — ${tech.witness}</div>
+                <div class="bg-black/25 rounded-lg p-3 mb-4">${exHTML}</div>
+                <div class="text-[10px] bg-black/25 rounded-lg px-3 py-2.5 border-l-2 border-gold/40">
+                    <span class="gold-text font-bold">COACH TIP: </span>
+                    <span class="text-muted">${tech.tip}</span>
+                </div>
+            </div>
         `;
+        container.appendChild(div);
+    });
 }
 
-// ── Listen to Strategy ─────────────────────────────────────────────────
-function startListenSim() {
-        if (!window.speechSynthesis) {
-                document.getElementById('rv-listen-display').textContent = 'Speech synthesis not available in this browser. Try Chrome or Edge.';
-                return;
+function toggleTechnique(headerEl, idx) {
+    const body  = document.getElementById(`tech-body-${idx}`);
+    const arrow = headerEl.querySelector('.text-muted.text-sm');
+    if (!body) return;
+
+    const isOpen = body.classList.contains('open');
+
+    // Close all
+    document.querySelectorAll('.technique-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.technique-header .text-muted.text-sm').forEach(a => { if (a) a.textContent = '▸'; });
+
+    if (!isOpen) {
+        body.classList.add('open');
+        if (arrow) arrow.textContent = '▾';
+
+        // Mastery tracking
+        const viewedSet = JSON.parse(_rv_getMastery('techViewedSet', '[]'));
+        if (!viewedSet.includes(idx)) {
+            viewedSet.push(idx);
+            _rv_saveMastery('techViewedSet', JSON.stringify(viewedSet));
+            _rv_saveMastery('techViewed', viewedSet.length);
         }
-        window.speechSynthesis.cancel();
-        ReviewState.listenSim.active = true;
-        ReviewState.listenSim.lineIndex = 0;
-        ReviewState.listenSim.score = 0;
-        ReviewState.listenSim.total = 0;
-
-        document.getElementById('rv-listen-start-btn').style.display = 'none';
-        document.getElementById('rv-listen-stop-btn').style.display = '';
-        document.getElementById('rv-listen-feedback').textContent = '';
-        document.getElementById('rv-listen-score').textContent = '';
-        document.getElementById('rv-listen-display').innerHTML = '<span style="color:var(--gold)">Listening...</span>';
-
-        _rv_playListenLine();
+    }
 }
 
-function _rv_playListenLine() {
-        const seg = REVIEW_DATA.listenSegment;
-        if (!ReviewState.listenSim.active || ReviewState.listenSim.lineIndex >= seg.length) {
-                _rv_endListenSim();
-                return;
-        }
-        const line = seg[ReviewState.listenSim.lineIndex];
-        const display = document.getElementById('rv-listen-display');
+// ── RUNAWAY WITNESS ──────────────────────────────────────────────────────────
+function startRunawayWitness() {
+    _rvRunawayState = { scenarioIdx: 0, evasionIdx: 0 };
+    _rv_renderRunaway();
+}
 
-        // Highlight active line
-        const techniqueTag = line.technique ? `<span style="background:rgba(212,175,55,0.25);border-radius:4px;padding:1px 6px;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-left:8px;">${line.label}</span>` : '';
-        display.innerHTML = `<span style="color:var(--text-muted);font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">${line.speaker}:</span> <span style="font-style:italic;">${line.text}</span>${techniqueTag}`;
+function _rv_renderRunaway() {
+    const container = document.getElementById('rv-rw-container');
+    if (!container) return;
 
-        if ('speechSynthesis' in window) {
-                const utt = new SpeechSynthesisUtterance(`${line.speaker === 'Q' ? 'Counsel' : 'Witness'}: ${line.text}`);
-                utt.rate = 0.92;
-                utt.pitch = line.speaker === 'Q' ? 1.0 : 0.88;
-                utt.lang = 'en-US';
-                ReviewState.listenSim.utterance = utt;
-                utt.onend = () => {
-                        ReviewState.listenSim.lineIndex++;
-                        setTimeout(_rv_playListenLine, 400);
-                };
-                window.speechSynthesis.speak(utt);
+    const scenario = RV_RUNAWAY_SCENARIOS[_rvRunawayState.scenarioIdx];
+    if (!scenario) {
+        container.innerHTML = `
+            <div class="glass rounded-xl p-5 border border-green-500/25">
+                <div class="text-green-400 font-bold text-sm mb-2">All Scenarios Complete</div>
+                <div class="text-xs text-muted leading-relaxed mb-4">
+                    The Ask → Repeat → Repeat technique works because it forces the witness to either answer or visibly evade. After two repeats, the judge sees the evasion. You then assert the point directly. The jury has now heard the damaging question three times.
+                </div>
+                <button onclick="startRunawayWitness()" class="btn-outline px-5 py-3 rounded-lg text-xs font-bold w-full" style="touch-action:manipulation;">RESTART</button>
+            </div>`;
+        return;
+    }
+
+    const evasion = scenario.evasions[_rvRunawayState.evasionIdx];
+    const isResolved = (_rvRunawayState.evasionIdx >= scenario.evasions.length);
+
+    if (isResolved) {
+        const hasNext = _rvRunawayState.scenarioIdx + 1 < RV_RUNAWAY_SCENARIOS.length;
+        container.innerHTML = `
+            <div class="glass rounded-xl p-5">
+                <div class="text-[10px] uppercase tracking-widest text-green-400 font-bold mb-3">Witness Controlled</div>
+                <div class="bg-black/25 rounded-lg p-3 mb-4 border-l-2 border-green-500">
+                    <div class="text-[10px] gold-text font-bold uppercase mb-1">Counsel (Final Assert):</div>
+                    <div class="text-xs text-white/90 italic">"${scenario.finalLine}"</div>
+                </div>
+                <div class="text-[10px] bg-black/20 rounded-lg px-3 py-2.5 text-muted leading-relaxed mb-4">
+                    <span class="text-white font-bold">Technique: </span>${scenario.techniqueLabel}<br>
+                    After two repeats without an answer, the jury has now heard your damaging question three times. The evasion itself is the testimony.
+                </div>
+                ${hasNext
+                    ? `<button onclick="nextRunawayScenario()" class="btn-primary px-5 py-3 rounded-lg text-sm font-bold w-full" style="touch-action:manipulation;">NEXT SCENARIO →</button>`
+                    : `<button onclick="startRunawayWitness()" class="btn-outline px-5 py-3 rounded-lg text-sm font-bold w-full" style="touch-action:manipulation;">RESTART</button>`}
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="glass rounded-xl p-5">
+            <div class="text-[10px] uppercase tracking-widest text-muted font-bold mb-3">
+                Scenario ${_rvRunawayState.scenarioIdx + 1} of ${RV_RUNAWAY_SCENARIOS.length}
+                &nbsp;·&nbsp; Evasion ${_rvRunawayState.evasionIdx + 1} of ${scenario.evasions.length}
+            </div>
+            <div class="bg-black/25 rounded-lg p-3 mb-4 border-l-2 border-gold">
+                <div class="text-[10px] gold-text font-bold uppercase mb-1">Your Question:</div>
+                <div class="text-xs text-white/90">${scenario.question}</div>
+            </div>
+            <div class="bg-black/25 rounded-lg p-3 mb-5 border-l-2 border-red-400/50">
+                <div class="text-[10px] text-red-400 font-bold uppercase mb-1">Witness Response:</div>
+                <div class="text-xs text-white/80 italic">"${evasion}"</div>
+            </div>
+            <div class="text-[10px] text-muted uppercase tracking-widest mb-3 font-bold">How do you respond?</div>
+            <div class="space-y-2" id="rw-btn-group">
+                <button onclick="handleRunawayChoice('repeat')" class="rw-choice-btn" style="touch-action:manipulation;">
+                    <span class="font-bold text-white">Repeat the question</span><span class="text-muted"> — ask the exact same question again, firmly.</span>
+                </button>
+                <button onclick="handleRunawayChoice('rephrase')" class="rw-choice-btn" style="touch-action:manipulation;">
+                    <span class="font-bold text-white">Rephrase</span><span class="text-muted"> — reword it to give the witness more room to answer.</span>
+                </button>
+                <button onclick="handleRunawayChoice('move-on')" class="rw-choice-btn" style="touch-action:manipulation;">
+                    <span class="font-bold text-white">Move on</span><span class="text-muted"> — accept their answer and go to your next topic.</span>
+                </button>
+            </div>
+        </div>`;
+}
+
+function handleRunawayChoice(choice) {
+    const isCorrect = choice === 'repeat';
+    const group = document.getElementById('rw-btn-group');
+    if (group) {
+        group.querySelectorAll('.rw-choice-btn').forEach(b => {
+            b.disabled = true;
+            b.style.opacity = '0.45';
+            b.style.cursor = 'default';
+        });
+    }
+
+    const fb = document.createElement('div');
+    fb.className = `mt-3 p-3 rounded-lg text-xs leading-relaxed ${isCorrect ? 'bg-green-950/35 border border-green-500/25' : 'bg-red-950/35 border border-red-500/25'}`;
+    if (isCorrect) {
+        fb.innerHTML = `<span class="font-bold text-green-400">Correct.</span> Repeating the question signals to the judge and jury that the witness is deliberately evading. Hold your ground — do not reward evasion.`;
+    } else if (choice === 'rephrase') {
+        fb.innerHTML = `<span class="font-bold text-red-400">Risky.</span> Rephrasing rewards the evasion and hands the witness a new exit. The original question was clear — stick with it.`;
+    } else {
+        fb.innerHTML = `<span class="font-bold text-red-400">Wrong.</span> Moving on lets the witness win. You abandon a key point and signal to the jury that their answer was acceptable. Never leave a key question unanswered.`;
+    }
+
+    const container = document.getElementById('rv-rw-container');
+    const glass = container ? container.querySelector('.glass') : null;
+    if (glass) glass.appendChild(fb);
+
+    setTimeout(() => {
+        const nextBtn = document.createElement('button');
+        nextBtn.style.touchAction = 'manipulation';
+        nextBtn.className = 'mt-3 btn-primary px-5 py-3 rounded-lg text-xs font-bold w-full';
+        const scenario = RV_RUNAWAY_SCENARIOS[_rvRunawayState.scenarioIdx];
+        if (isCorrect && _rvRunawayState.evasionIdx + 1 < scenario.evasions.length) {
+            nextBtn.textContent = 'WITNESS EVADES AGAIN →';
+            nextBtn.onclick = () => { _rvRunawayState.evasionIdx++; _rv_renderRunaway(); };
         } else {
-                // Fallback: auto-advance without audio
-                setTimeout(() => {
-                        ReviewState.listenSim.lineIndex++;
-                        _rv_playListenLine();
-                }, 3000);
+            nextBtn.textContent = 'SEE RESOLUTION →';
+            nextBtn.onclick = () => { _rvRunawayState.evasionIdx = scenario.evasions.length; _rv_renderRunaway(); };
         }
+        if (glass) glass.appendChild(nextBtn);
+    }, 350);
 }
 
-function stopListenSim() {
-        ReviewState.listenSim.active = false;
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        document.getElementById('rv-listen-start-btn').style.display = '';
-        document.getElementById('rv-listen-stop-btn').style.display = 'none';
-        document.getElementById('rv-listen-display').textContent = 'Stopped. Press Play to restart.';
+function nextRunawayScenario() {
+    _rvRunawayState.scenarioIdx++;
+    _rvRunawayState.evasionIdx = 0;
+    _rv_renderRunaway();
 }
 
-function _rv_endListenSim() {
-        ReviewState.listenSim.active = false;
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        document.getElementById('rv-listen-start-btn').style.display = '';
-        document.getElementById('rv-listen-stop-btn').style.display = 'none';
-        const s = ReviewState.listenSim;
-        document.getElementById('rv-listen-score').textContent = `Final Score: ${s.score}/${s.total} technique tags`;
-        document.getElementById('rv-listen-display').textContent = 'Segment complete.';
-}
+// ── FACT LAB ─────────────────────────────────────────────────────────────────
+function buildFactLab() {
+    const container = document.getElementById('rv-factlab-rows');
+    if (!container) return;
+    container.innerHTML = '';
 
-function tagListenTechnique(tag) {
-        if (!ReviewState.listenSim.active) return;
+    const revealed = JSON.parse(_rv_getMastery('factsRevealedSet', '[]'));
 
-        const seg = REVIEW_DATA.listenSegment;
-        const currentIdx = Math.max(0, ReviewState.listenSim.lineIndex - 1);
-        const line = seg[currentIdx] || {};
-        const expectedTags = { looping: 'looping', headlining: 'headlining', scene: 'scenesetting', weakness: 'volunteering', threecs: 'threecs', chapter: 'chapter' };
-        const expected = line.technique;
-        const tagMap = expectedTags[tag];
+    RV_BAD_FACTS.forEach(fact => {
+        const isRevealed = revealed.includes(fact.id);
+        const row = document.createElement('div');
+        row.className = 'fact-row';
 
-        ReviewState.listenSim.total++;
-        const btn = event.currentTarget;
+        const neutralHtml = isRevealed
+            ? `<div><div class="text-[10px] uppercase tracking-widest text-green-400 font-bold mb-1">Neutralization</div>${fact.neutralize}</div>`
+            : '<span>Tap to reveal →</span>';
 
-        if (expected && tagMap === expected) {
-                ReviewState.listenSim.score++;
-                btn.classList.add('correct-flash');
-                document.getElementById('rv-listen-feedback').textContent = `Correct! ${line.label} detected.`;
-                document.getElementById('rv-listen-feedback').style.color = '#4ade80';
-        } else if (!expected) {
-                btn.classList.add('wrong-flash');
-                document.getElementById('rv-listen-feedback').textContent = 'No technique at this exact moment — keep listening.';
-                document.getElementById('rv-listen-feedback').style.color = '#fca5a5';
-        } else {
-                btn.classList.add('wrong-flash');
-                document.getElementById('rv-listen-feedback').textContent = `That was actually ${line.label}. Tap the correct button.`;
-                document.getElementById('rv-listen-feedback').style.color = '#fca5a5';
+        row.innerHTML = `
+            <div class="fact-cell fact-bad">
+                <div class="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-1">${fact.label}</div>
+                <div class="text-white/90">${fact.bad}</div>
+            </div>
+            <div class="fact-cell fact-neutral-cell ${isRevealed ? 'revealed' : ''}"
+                 id="fact-neutral-${fact.id}">
+                ${neutralHtml}
+            </div>`;
+        container.appendChild(row);
+
+        // Wire touch + click
+        if (!isRevealed) {
+            const cell = row.querySelector(`#fact-neutral-${fact.id}`);
+            const fire = (e) => { e.preventDefault(); neutralizeFact(fact.id); };
+            cell.addEventListener('click', fire);
+            cell.addEventListener('touchend', fire);
         }
+    });
 
-        setTimeout(() => { btn.classList.remove('correct-flash', 'wrong-flash'); }, 600);
-        document.getElementById('rv-listen-score').textContent = `Score: ${ReviewState.listenSim.score}/${ReviewState.listenSim.total}`;
+    _rv_updateFactCounter();
 }
 
-// ── Runaway Witness ────────────────────────────────────────────────────
-function _rv_initRunaway() {
-        const panel = document.getElementById('rv-runaway-choices');
-        if (panel) panel.innerHTML = '';
-        document.getElementById('rv-runaway-q').textContent = 'Press Start to begin a scenario.';
-        const wEl = document.getElementById('rv-runaway-witness');
-        if (wEl) { wEl.textContent = ''; wEl.classList.add('hidden'); }
-        document.getElementById('rv-runaway-feedback').classList.add('hidden');
-        ReviewState.runaway.score = 0;
-        ReviewState.runaway.total = 0;
-        ReviewState.runaway.scenarioIndex = 0;
-        _rv_updateRunawayScore();
-}
+function neutralizeFact(id) {
+    const el = document.getElementById(`fact-neutral-${id}`);
+    if (!el || el.classList.contains('revealed')) return;
 
-function startRunawaySim() {
-        const scenarios = REVIEW_DATA.runawayScenarios;
-        const idx = ReviewState.runaway.scenarioIndex % scenarios.length;
-        const scenario = scenarios[idx];
-        ReviewState.runaway.active = true;
+    const fact = RV_BAD_FACTS.find(f => f.id === id);
+    if (!fact) return;
 
-        document.getElementById('rv-runaway-q').textContent = scenario.q;
-        const wEl = document.getElementById('rv-runaway-witness');
-        wEl.textContent = `Witness: "${scenario.evasion}"`;
-        wEl.classList.remove('hidden');
+    el.classList.add('revealed');
+    el.style.cursor = 'default';
+    el.innerHTML = `<div><div class="text-[10px] uppercase tracking-widest text-green-400 font-bold mb-1">Neutralization</div>${fact.neutralize}</div>`;
 
-        const feedback = document.getElementById('rv-runaway-feedback');
-        feedback.classList.add('hidden');
-        feedback.className = 'rv-runaway-feedback hidden';
-
-        const choicesEl = document.getElementById('rv-runaway-choices');
-        choicesEl.innerHTML = '';
-        scenario.choices.forEach((choice, i) => {
-                const btn = document.createElement('button');
-                btn.className = 'rv-runaway-choice';
-                btn.textContent = choice.text;
-                btn.addEventListener('click', () => _rv_handleRunawayChoice(choice, btn));
-                btn.addEventListener('touchend', (e) => { e.preventDefault(); _rv_handleRunawayChoice(choice, btn); });
-                choicesEl.appendChild(btn);
-        });
-
-        document.getElementById('rv-runaway-start').textContent = 'Next Scenario';
-}
-
-function _rv_handleRunawayChoice(choice, btn) {
-        if (!ReviewState.runaway.active) return;
-        ReviewState.runaway.active = false;
-        ReviewState.runaway.total++;
-
-        // Disable all buttons
-        document.querySelectorAll('.rv-runaway-choice').forEach(b => {
-                b.classList.add(b === btn ? (choice.correct ? 'correct' : 'wrong') : 'wrong');
-                b.disabled = true;
-        });
-        // Show correct
-        document.querySelectorAll('.rv-runaway-choice').forEach((b, i) => {
-                if (REVIEW_DATA.runawayScenarios[ReviewState.runaway.scenarioIndex % REVIEW_DATA.runawayScenarios.length].choices[i].correct) {
-                        b.classList.remove('wrong');
-                        b.classList.add('correct');
-                }
-        });
-
-        if (choice.correct) ReviewState.runaway.score++;
-
-        const feedback = document.getElementById('rv-runaway-feedback');
-        feedback.className = `rv-runaway-feedback ${choice.correct ? 'correct' : 'wrong'}`;
-        feedback.textContent = choice.explanation;
-        feedback.classList.remove('hidden');
-
-        ReviewState.runaway.scenarioIndex++;
-        _rv_updateRunawayScore();
-
-        // Save to stats
-        _rv_saveReviewStat('runaway', choice.correct);
-}
-
-function _rv_updateRunawayScore() {
-        const el = document.getElementById('rv-runaway-score');
-        if (el) el.textContent = `${ReviewState.runaway.score}/${ReviewState.runaway.total}`;
-}
-
-// ── Fact Lab ───────────────────────────────────────────────────────────
-function _rv_initFactLab() {
-        // Load saved progress
-        const saved = _rv_loadStat('factLabNeutralized');
-        if (saved && Array.isArray(saved)) {
-                ReviewState.factLab.neutralized = new Set(saved);
-        }
-
-        const list = document.getElementById('rv-fact-list');
-        if (!list) return;
-        list.innerHTML = '';
-
-        REVIEW_DATA.badFacts.forEach((fact, idx) => {
-                const isNeutralized = ReviewState.factLab.neutralized.has(idx);
-                const item = document.createElement('div');
-                item.className = `rv-fact-item${isNeutralized ? ' neutralized' : ''}`;
-                item.id = `rv-fact-${idx}`;
-                item.innerHTML = `
-                    <div class="rv-fact-header">
-                        <span class="rv-fact-num">FACT ${idx + 1}</span>
-                        <div style="flex:1;">
-                            <div class="rv-bad-fact-text">${fact.fact}</div>
-                            <div class="rv-fact-context">${fact.context}</div>
-                        </div>
-                        <button class="rv-neutralize-btn" onclick="neutralizeFact(${idx})" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;" ${isNeutralized ? 'disabled' : ''}>
-                            ${isNeutralized ? 'Neutralized' : 'Neutralize'}
-                        </button>
-                    </div>
-                    <div class="rv-neutralizer-panel">
-                        <div class="rv-neutralizer-label">Counter-Narrative</div>
-                        <div class="rv-neutralizer-text">${fact.neutralizer}</div>
-                        <div class="rv-plaintiff-counter"><strong>For Plaintiff:</strong> ${fact.plaintiff_counter}</div>
-                        <div class="rv-exhibit-link">${fact.exhibit_link}</div>
-                    </div>
-                `;
-                list.appendChild(item);
-        });
-
-        _rv_updateFactLabProgress();
-}
-
-function neutralizeFact(idx) {
-        ReviewState.factLab.neutralized.add(idx);
-        const item = document.getElementById(`rv-fact-${idx}`);
-        if (item) {
-                item.classList.add('neutralized');
-                const btn = item.querySelector('.rv-neutralize-btn');
-                if (btn) { btn.textContent = 'Neutralized'; btn.disabled = true; }
-        }
-        // Persist
-        _rv_saveStat('factLabNeutralized', Array.from(ReviewState.factLab.neutralized));
-        _rv_updateFactLabProgress();
-        _rv_updateMasteryBadge();
-        _rv_saveReviewStat('factlab', true);
+    const revealed = JSON.parse(_rv_getMastery('factsRevealedSet', '[]'));
+    if (!revealed.includes(id)) {
+        revealed.push(id);
+        _rv_saveMastery('factsRevealedSet', JSON.stringify(revealed));
+        _rv_saveMastery('factsRevealed', revealed.length);
+    }
+    _rv_updateFactCounter();
 }
 
 function resetFactLab() {
-        ReviewState.factLab.neutralized.clear();
-        _rv_saveStat('factLabNeutralized', []);
-        _rv_initFactLab();
-        document.getElementById('rv-fl-complete').classList.add('hidden');
+    _rv_saveMastery('factsRevealedSet', '[]');
+    _rv_saveMastery('factsRevealed', 0);
+    buildFactLab();
 }
 
-function _rv_updateFactLabProgress() {
-        const total = REVIEW_DATA.badFacts.length;
-        const done = ReviewState.factLab.neutralized.size;
-        const pct = Math.round((done / total) * 100);
-        const fill = document.getElementById('rv-fl-progress-fill');
-        if (fill) fill.style.width = pct + '%';
-        const txt = document.getElementById('rv-fl-progress-text');
-        if (txt) txt.textContent = `${done}/${total} Neutralized`;
-
-        if (done === total) {
-                const complete = document.getElementById('rv-fl-complete');
-                if (complete) complete.classList.remove('hidden');
-        }
+function _rv_updateFactCounter() {
+    const revealed = JSON.parse(_rv_getMastery('factsRevealedSet', '[]'));
+    const el = document.getElementById('rv-factlab-revealed');
+    const tot = document.getElementById('rv-factlab-total');
+    if (el)  el.textContent  = revealed.length;
+    if (tot) tot.textContent = RV_BAD_FACTS.length;
 }
 
-// ── Rules Tab ──────────────────────────────────────────────────────────
-function _rv_initRulesTab() {
-        switchRulesMode(ReviewState.rulesMode || 'browse');
+// ── BATTLE DRILLS ────────────────────────────────────────────────────────────
+function initBattleDrills() {
+    _rvDrillState.order    = [...Array(RV_BATTLE_DRILLS.length).keys()].sort(() => Math.random() - 0.5);
+    _rvDrillState.idx      = 0;
+    _rvDrillState.answered = false;
+    _rvDrillState.score    = _rv_getMastery('drillCorrect', 0);
+    _rvDrillState.total    = _rv_getMastery('drillTotal',   0);
 }
 
-function switchRulesMode(mode) {
-        ReviewState.rulesMode = mode;
-        const browseBtn = document.getElementById('rv-mode-browse');
-        const drillBtn = document.getElementById('rv-mode-drill');
-        const browseEl = document.getElementById('rv-browse-mode');
-        const drillEl = document.getElementById('rv-drill-mode');
+function switchDrillMode() {
+    const browse  = document.getElementById('rv-rules-browse');
+    const drill   = document.getElementById('rv-battle-drill');
+    const toggle  = document.getElementById('rv-drill-toggle');
+    if (!browse || !drill || !toggle) return;
 
-        if (mode === 'browse') {
-                browseBtn.classList.add('active');
-                drillBtn.classList.remove('active');
-                browseEl.classList.remove('hidden');
-                drillEl.classList.add('hidden');
-                _rv_renderRulesList();
-        } else {
-                browseBtn.classList.remove('active');
-                drillBtn.classList.add('active');
-                browseEl.classList.add('hidden');
-                drillEl.classList.remove('hidden');
-                _rv_initDrillDisplay();
-        }
+    const isDrill = !drill.classList.contains('hidden');
+    if (isDrill) {
+        drill.classList.add('hidden');
+        browse.classList.remove('hidden');
+        toggle.textContent = 'Battle Drills';
+        toggle.classList.remove('btn-primary');
+        toggle.classList.add('btn-outline');
+    } else {
+        browse.classList.add('hidden');
+        drill.classList.remove('hidden');
+        toggle.textContent = 'Browse Rules';
+        toggle.classList.remove('btn-outline');
+        toggle.classList.add('btn-primary');
+        _rv_loadDrillCard();
+    }
 }
 
-function _rv_renderRulesList() {
-        const list = document.getElementById('rules-list');
-        if (!list) return;
-        const rules = window.MockTrialRulesData || [];
-        list.innerHTML = '';
-        rules.forEach(rule => {
-                const div = document.createElement('div');
-                div.className = "glass p-5 rounded-xl border border-white/5 hover:border-gold transition-colors";
-                div.innerHTML = `
-                        <div class="flex justify-between items-start mb-2 flex-wrap gap-1">
-                                <h3 style="font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--gold);">Rule ${rule.rule}</h3>
-                                <span style="font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-muted); background:rgba(255,255,255,0.07); padding:3px 8px; border-radius:50px;">${rule.name}</span>
-                        </div>
-                        <p style="font-size:0.78rem; color:#cbd5e1; margin-bottom:10px; font-style:italic; line-height:1.6;">"${rule.desc}"</p>
-                        ${rule.tip ? `<div style="font-size:0.72rem; margin-bottom:6px;"><span style="color:#4ade80; font-weight:700;">PRO-TIP: </span><span style="color:#94a3b8;">${rule.tip}</span></div>` : ''}
-                        ${rule.pitfall ? `<div style="font-size:0.72rem;"><span style="color:#fca5a5; font-weight:700;">PITFALL: </span><span style="color:#94a3b8;">${rule.pitfall}</span></div>` : ''}
-                `;
-                list.appendChild(div);
+function _rv_loadDrillCard() {
+    const ordIdx = _rvDrillState.idx % _rvDrillState.order.length;
+    const drill  = RV_BATTLE_DRILLS[_rvDrillState.order[ordIdx]];
+
+    // Scenario text
+    const scenEl = document.getElementById('rv-drill-scenario');
+    if (scenEl) scenEl.textContent = drill.scenario;
+
+    // Reset flip
+    const card = document.getElementById('rv-drill-card');
+    if (card) card.classList.remove('flipped');
+
+    // Options
+    const optsEl = document.getElementById('rv-drill-options');
+    if (optsEl) {
+        const choices = [drill.correctRule, ...drill.distractors].sort(() => Math.random() - 0.5);
+        const rulesData = window.MockTrialRulesData || [];
+        optsEl.innerHTML = '';
+        choices.forEach(ruleId => {
+            const info = rulesData.find(r => r.rule === ruleId) || { name: 'Unknown' };
+            const btn = document.createElement('button');
+            btn.className = 'drill-option-btn';
+            btn.dataset.rule = ruleId;
+            btn.innerHTML = `<span class="gold-text font-mono font-bold">Rule ${ruleId}</span> — ${info.name}`;
+            const fire = (e) => { e.preventDefault(); answerBattleDrill(ruleId, btn); };
+            btn.addEventListener('click', fire);
+            btn.addEventListener('touchend', fire);
+            optsEl.appendChild(btn);
         });
+    }
+
+    // Reset UI
+    const fb   = document.getElementById('rv-drill-feedback');
+    const next = document.getElementById('rv-drill-next');
+    if (fb)   { fb.classList.add('hidden'); }
+    if (next) { next.classList.add('hidden'); }
+
+    _rvDrillState.answered = false;
+    _rv_updateDrillDisplay();
 }
 
-// ── Existing filterRules — enhanced ───────────────────────────────────
-function filterRules() {
-        const query = document.getElementById('rules-search').value.toLowerCase();
-        const list = document.getElementById('rules-list');
-        if (!list) return;
-        const rules = window.MockTrialRulesData || [];
-        list.innerHTML = '';
-        rules.forEach(rule => {
-                if (rule.rule.toLowerCase().includes(query) ||
-                        rule.name.toLowerCase().includes(query) ||
-                        rule.desc.toLowerCase().includes(query) ||
-                        (rule.tip && rule.tip.toLowerCase().includes(query)) ||
-                        (rule.pitfall && rule.pitfall.toLowerCase().includes(query))) {
-                        const div = document.createElement('div');
-                        div.className = "glass p-5 rounded-xl border border-white/5 hover:border-gold transition-colors";
-                        div.innerHTML = `
-                                <div class="flex justify-between items-start mb-2 flex-wrap gap-1">
-                                        <h3 style="font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--gold);">Rule ${rule.rule}</h3>
-                                        <span style="font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-muted); background:rgba(255,255,255,0.07); padding:3px 8px; border-radius:50px;">${rule.name}</span>
-                                </div>
-                                <p style="font-size:0.78rem; color:#cbd5e1; margin-bottom:10px; font-style:italic; line-height:1.6;">"${rule.desc}"</p>
-                                ${rule.tip ? `<div style="font-size:0.72rem; margin-bottom:6px;"><span style="color:#4ade80; font-weight:700;">PRO-TIP: </span><span style="color:#94a3b8;">${rule.tip}</span></div>` : ''}
-                                ${rule.pitfall ? `<div style="font-size:0.72rem;"><span style="color:#fca5a5; font-weight:700;">PITFALL: </span><span style="color:#94a3b8;">${rule.pitfall}</span></div>` : ''}
-                        `;
-                        list.appendChild(div);
-                }
-        });
+function flipDrillCard() {
+    const card = document.getElementById('rv-drill-card');
+    if (card) card.classList.toggle('flipped');
 }
 
-// ── Battle Drills ──────────────────────────────────────────────────────
-function _rv_initDrillDisplay() {
-        const saved = _rv_loadStat('drillStats') || { score: 0, streak: 0, total: 0 };
-        ReviewState.drill.score = saved.score;
-        ReviewState.drill.streak = saved.streak;
-        ReviewState.drill.total = saved.total;
-        _rv_updateDrillDisplay();
-        document.getElementById('drill-options').innerHTML = '';
-        document.getElementById('drill-feedback').classList.add('hidden');
-        document.getElementById('drill-timer-bar-wrap').classList.add('hidden');
-}
+function answerBattleDrill(ruleId, clickedBtn) {
+    if (_rvDrillState.answered) return;
+    _rvDrillState.answered = true;
 
-function startBattleDrill() {
-        clearInterval(ReviewState.drill.timerInterval);
-        ReviewState.drill.answered = false;
+    const ordIdx = _rvDrillState.idx % _rvDrillState.order.length;
+    const drill  = RV_BATTLE_DRILLS[_rvDrillState.order[ordIdx]];
+    const correct = ruleId === drill.correctRule;
 
-        // Pick a random scenario (avoid repeating)
-        const drills = REVIEW_DATA.battleDrills;
-        let idx;
-        do { idx = Math.floor(Math.random() * drills.length); }
-        while (idx === ReviewState.drill.currentScenarioIdx && drills.length > 1);
-        ReviewState.drill.currentScenarioIdx = idx;
+    if (correct) _rvDrillState.score++;
+    _rvDrillState.total++;
 
-        const drill = drills[idx];
-
-        document.getElementById('drill-scenario').textContent = drill.scenario;
-        document.getElementById('drill-speaker').textContent = drill.speaker;
-        document.getElementById('drill-feedback').classList.add('hidden');
-
-        // Build options: correct + 3 distractors, shuffled
-        const allRules = window.MockTrialRulesData || [];
-        const correctRule = allRules.find(r => r.rule === drill.correct);
-        const distractorRules = drill.distractors.map(id => allRules.find(r => r.rule === id)).filter(Boolean);
-        const options = [
-                { rule: correctRule, isCorrect: true },
-                ...distractorRules.map(r => ({ rule: r, isCorrect: false }))
-        ].sort(() => Math.random() - 0.5);
-
-        const optionsEl = document.getElementById('drill-options');
-        optionsEl.innerHTML = '';
-        options.forEach(opt => {
-                if (!opt.rule) return;
-                const btn = document.createElement('button');
-                btn.className = 'rv-drill-option';
-                btn.innerHTML = `<span style="color:var(--gold); font-weight:700; font-family:monospace; font-size:0.72rem;">Rule ${opt.rule.rule}</span><br><span style="font-size:0.78rem;">${opt.rule.name}</span>`;
-
-                const handler = (e) => {
-                        if (e.cancelable) e.preventDefault();
-                        _rv_handleDrillAnswer(opt.isCorrect, drill, btn, optionsEl);
-                };
-                btn.addEventListener('click', handler);
-                btn.addEventListener('touchend', handler);
-                optionsEl.appendChild(btn);
+    // Disable + color all buttons
+    const optsEl = document.getElementById('rv-drill-options');
+    if (optsEl) {
+        optsEl.querySelectorAll('.drill-option-btn').forEach(btn => {
+            btn.disabled = true;
+            if (btn.dataset.rule === drill.correctRule) btn.classList.add('correct');
+            else if (btn === clickedBtn && !correct)    btn.classList.add('wrong');
         });
+    }
 
-        // Start timer
-        ReviewState.drill.timerRemaining = 8;
-        const timerWrap = document.getElementById('drill-timer-bar-wrap');
-        const timerBar = document.getElementById('drill-timer-bar');
-        const timerText = document.getElementById('drill-timer-text');
-        timerWrap.classList.remove('hidden');
-        timerBar.style.width = '100%';
-        timerBar.style.background = 'var(--gold)';
+    // Populate and flip card
+    const card = document.getElementById('rv-drill-card');
+    if (card) {
+        const rulesData = window.MockTrialRulesData || [];
+        const info = rulesData.find(r => r.rule === drill.correctRule) || {};
+        const rn = document.getElementById('rv-drill-rule-num');
+        const rnam = document.getElementById('rv-drill-rule-name');
+        const rw = document.getElementById('rv-drill-rule-why');
+        if (rn)   rn.textContent  = `Rule ${drill.correctRule}`;
+        if (rnam) rnam.textContent = info.name || '';
+        if (rw)   rw.textContent  = drill.explanation;
+        card.classList.add('flipped');
+    }
 
-        ReviewState.drill.timerInterval = setInterval(() => {
-                ReviewState.drill.timerRemaining -= 0.1;
-                const pct = Math.max(0, (ReviewState.drill.timerRemaining / 8) * 100);
-                timerBar.style.width = pct + '%';
-                timerText.textContent = Math.ceil(ReviewState.drill.timerRemaining) + 's';
-                if (ReviewState.drill.timerRemaining <= 2) timerBar.style.background = '#ef4444';
-                if (ReviewState.drill.timerRemaining <= 0 && !ReviewState.drill.answered) {
-                        clearInterval(ReviewState.drill.timerInterval);
-                        _rv_handleDrillAnswer(false, drill, null, optionsEl, true);
-                }
-        }, 100);
-}
-
-function _rv_handleDrillAnswer(isCorrect, drill, clickedBtn, optionsEl, timedOut = false) {
-        if (ReviewState.drill.answered) return;
-        ReviewState.drill.answered = true;
-        clearInterval(ReviewState.drill.timerInterval);
-
-        // Visual feedback on buttons
-        const allBtns = optionsEl.querySelectorAll('.rv-drill-option');
-        allBtns.forEach(b => {
-                b.classList.add('disabled');
-                b.style.pointerEvents = 'none';
-        });
-        if (clickedBtn) {
-                clickedBtn.classList.remove('disabled');
-                clickedBtn.classList.add(isCorrect ? 'correct' : 'wrong');
-        }
-        // Always reveal correct
-        const allRules = window.MockTrialRulesData || [];
-        allBtns.forEach(b => {
-                const ruleText = b.querySelector('span:first-child').textContent;
-                if (ruleText.includes(drill.correct)) {
-                        b.classList.remove('disabled', 'wrong');
-                        b.classList.add('correct');
-                }
-        });
-
-        // Update score
-        ReviewState.drill.total++;
-        if (isCorrect) {
-                ReviewState.drill.score += 10;
-                ReviewState.drill.streak++;
-        } else {
-                ReviewState.drill.score = Math.max(0, ReviewState.drill.score - 3);
-                ReviewState.drill.streak = 0;
-        }
-        _rv_updateDrillDisplay();
-
-        // Show feedback
-        const fb = document.getElementById('drill-feedback');
-        const fbTitle = document.getElementById('drill-feedback-title');
-        const fbBody = document.getElementById('drill-feedback-body');
+    // Feedback
+    const fb = document.getElementById('rv-drill-feedback');
+    if (fb) {
         fb.classList.remove('hidden');
-        fb.style.border = `1px solid ${isCorrect ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`;
-        fb.style.background = isCorrect ? 'rgba(74,222,128,0.08)' : 'rgba(239,68,68,0.08)';
-        fbTitle.textContent = timedOut ? 'Time Expired' : (isCorrect ? 'Correct' : 'Overruled');
-        fbTitle.style.color = isCorrect ? '#4ade80' : '#f87171';
-        fbBody.innerHTML = `${drill.explanation}<br><br><span style="color:var(--gold); font-weight:600;">Tip: </span><span style="color:#94a3b8;">${drill.tip}</span>`;
+        fb.className = `p-3 rounded-lg mb-4 text-xs leading-relaxed ${correct ? 'bg-green-950/35 border border-green-500/25 text-green-200' : 'bg-red-950/35 border border-red-500/25 text-red-200'}`;
+        fb.innerHTML = `<span class="font-bold">${correct ? 'Correct.' : `Incorrect — Rule ${drill.correctRule}.`}</span> ${drill.explanation}`;
+    }
 
-        // Persist stats
-        _rv_saveStat('drillStats', {
-                score: ReviewState.drill.score,
-                streak: ReviewState.drill.streak,
-                total: ReviewState.drill.total
-        });
-        _rv_saveReviewStat('drill', isCorrect);
-        _rv_updateMasteryBadge();
+    // Show next
+    const next = document.getElementById('rv-drill-next');
+    if (next) next.classList.remove('hidden');
+
+    // Persist
+    _rv_saveMastery('drillCorrect', _rvDrillState.score);
+    _rv_saveMastery('drillTotal',   _rvDrillState.total);
+
+    _rv_updateDrillDisplay();
 }
 
-function resetBattleDrill() {
-        clearInterval(ReviewState.drill.timerInterval);
-        ReviewState.drill.score = 0;
-        ReviewState.drill.streak = 0;
-        ReviewState.drill.total = 0;
-        ReviewState.drill.answered = false;
-        _rv_saveStat('drillStats', { score: 0, streak: 0, total: 0 });
-        _rv_updateDrillDisplay();
-        document.getElementById('drill-options').innerHTML = '';
-        document.getElementById('drill-feedback').classList.add('hidden');
-        document.getElementById('drill-timer-bar-wrap').classList.add('hidden');
-        document.getElementById('drill-scenario').textContent = 'Press "New Question" to begin Battle Drills.';
-        document.getElementById('drill-speaker').textContent = '';
-        _rv_updateMasteryBadge();
+function nextBattleDrill() {
+    _rvDrillState.idx++;
+    if (_rvDrillState.idx >= _rvDrillState.order.length) {
+        _rvDrillState.order = [...Array(RV_BATTLE_DRILLS.length).keys()].sort(() => Math.random() - 0.5);
+        _rvDrillState.idx   = 0;
+    }
+    _rv_loadDrillCard();
 }
 
 function _rv_updateDrillDisplay() {
-        const scoreEl = document.getElementById('drill-score-display');
-        const streakEl = document.getElementById('drill-streak-display');
-        const totalEl = document.getElementById('drill-total-display');
-        if (scoreEl) scoreEl.textContent = ReviewState.drill.score;
-        if (streakEl) streakEl.textContent = ReviewState.drill.streak;
-        if (totalEl) totalEl.textContent = ReviewState.drill.total;
+    const sc   = document.getElementById('rv-drill-score');
+    const prog = document.getElementById('rv-drill-progress');
+    const tot  = document.getElementById('rv-drill-total');
+    if (sc)   sc.textContent   = `${_rvDrillState.score} / ${_rvDrillState.total}`;
+    if (prog) prog.textContent = (_rvDrillState.idx % _rvDrillState.order.length) + 1;
+    if (tot)  tot.textContent  = _rvDrillState.order.length;
 }
-
-// ── Mastery Badge ──────────────────────────────────────────────────────
-function _rv_updateMasteryBadge() {
-        const stats = JSON.parse(localStorage.getItem('quantum_legal_stats') || '{}');
-        const drillTotal = (stats.drillTotal || 0);
-        const drillCorrect = (stats.drillCorrect || 0);
-        const factsDone = (stats.factLabDone || 0);
-        const factsTotal = REVIEW_DATA.badFacts.length;
-        const runawayCorrect = (stats.runawayCorrect || 0);
-        const runawayTotal = (stats.runawayTotal || 0);
-
-        // Composite mastery: weighted average
-        let score = 0, total = 0;
-        if (drillTotal > 0) { score += (drillCorrect / drillTotal) * 50; total += 50; }
-        if (factsTotal > 0) { score += (factsDone / factsTotal) * 30; total += 30; }
-        if (runawayTotal > 0) { score += (runawayCorrect / runawayTotal) * 20; total += 20; }
-
-        const pct = total > 0 ? Math.round((score / total) * 100) : 0;
-        const el = document.getElementById('rv-mastery-score');
-        if (el) el.textContent = pct + '%';
-}
-
-// ── Persistence Helpers ────────────────────────────────────────────────
-function _rv_saveReviewStat(type, correct) {
-        const stats = JSON.parse(localStorage.getItem('quantum_legal_stats') || '{}');
-        if (type === 'drill') {
-                stats.drillTotal = (stats.drillTotal || 0) + 1;
-                if (correct) stats.drillCorrect = (stats.drillCorrect || 0) + 1;
-        } else if (type === 'factlab') {
-                stats.factLabDone = ReviewState.factLab.neutralized.size;
-        } else if (type === 'runaway') {
-                stats.runawayTotal = (stats.runawayTotal || 0) + 1;
-                if (correct) stats.runawayCorrect = (stats.runawayCorrect || 0) + 1;
-        }
-        localStorage.setItem('quantum_legal_stats', JSON.stringify(stats));
-}
-
-function _rv_saveStat(key, value) {
-        try { localStorage.setItem('rv_' + key, JSON.stringify(value)); } catch(e) {}
-}
-
-function _rv_loadStat(key) {
-        try { const v = localStorage.getItem('rv_' + key); return v ? JSON.parse(v) : null; } catch(e) { return null; }
-}
-
-function _rv_trackTabVisit(tab) {
-        const stats = JSON.parse(localStorage.getItem('quantum_legal_stats') || '{}');
-        if (!stats.reviewTabs) stats.reviewTabs = {};
-        stats.reviewTabs[tab] = (stats.reviewTabs[tab] || 0) + 1;
-        localStorage.setItem('quantum_legal_stats', JSON.stringify(stats));
-}
-
-
-

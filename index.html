@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -16,19 +16,6 @@
     <script src="Engine.js"></script>
 
     <style>
-        .judge-feedback-banner {
-    animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.objection-rule-btn {
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation; /* Optimizes for mobile tapping */
-}
         :root {
             --court-dark: #0a0c10;
             --court-panel: rgba(20, 24, 33, 0.8);
@@ -205,16 +192,17 @@
             transition: width 0.1s linear;
         }
 
-    #objection-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.95);
-    z-index: 1000;
-    justify-content: center;
-    align-items: flex-end;
-    touch-action: none; /* PREVENTS BACKGROUND SCROLLING */
-    }
+        #objection-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end; /* sheet slides up from bottom on mobile */
+            -webkit-overflow-scrolling: touch;
+        }
+
         @media (min-width: 640px) {
             #objection-overlay {
                 align-items: center;
@@ -377,392 +365,285 @@
                 height: calc(100dvh - 160px);
             }
         }
-        /* ═══════════════════════════════════════════════════════════════════════
-   REVIEW ROOM — MASTERY CENTER CSS
-   Add this entire block to the existing <style> section in index.html,
-   just before the closing </style> tag.
-   ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Tab Navigation ── */
-.rv-tab-bar {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 0;
-  margin-bottom: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.rv-tab-bar::-webkit-scrollbar { display: none; }
-.rv-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border-radius: 8px 8px 0 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.2s, background 0.2s, border-color 0.2s;
-  min-height: 48px;
-  flex-shrink: 0;
-}
-.rv-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
-.rv-tab.active { color: var(--gold); background: rgba(212,175,55,0.07); border-bottom-color: var(--gold); }
-.rv-tab-icon { font-size: 0.9rem; }
+        /* ═══════════════════════════════════════════
+           REVIEW ROOM — MASTERY HUB
+        ═══════════════════════════════════════════ */
 
-/* ── Panes ── */
-.rv-pane { display: none; }
-.rv-pane.active { display: block; animation: fadeIn 0.3s ease; }
-.rv-scroll-pane { padding-bottom: 100px; }
+        /* Tab Bar */
+        .rv-tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid rgba(255,255,255,0.08);
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .rv-tab-bar::-webkit-scrollbar { display: none; }
+        .rv-tab {
+            flex-shrink: 0;
+            padding: 0.875rem 1.125rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+            touch-action: manipulation;
+            white-space: nowrap;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+        .rv-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .rv-tab:hover:not(.active) { color: var(--text-main); }
 
-/* ── Section Headers ── */
-.rv-section-header {
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--gold);
-  border-bottom: 1px solid rgba(212,175,55,0.2);
-  padding-bottom: 8px;
-  margin-bottom: 16px;
-  font-family: 'Inter', sans-serif;
-}
+        /* Panels */
+        .rv-panel { display: none; padding: 1.5rem 0 3rem; }
+        .rv-panel.active { display: block; animation: fadeIn 0.3s ease; }
 
-/* ── AURA Banner ── */
-.rv-aura-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px 16px;
-}
-.rv-aura-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(212,175,55,0.09);
-  border: 1px solid rgba(212,175,55,0.25);
-  border-radius: 50px;
-  padding: 7px 16px;
-  cursor: default;
-}
-.rv-aura-letter {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--gold);
-  line-height: 1;
-}
-.rv-aura-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-}
-.rv-aura-arrow { color: rgba(255,255,255,0.2); font-size: 0.9rem; }
+        /* Strategy Deck */
+        .act-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            .act-flow { flex-direction: row; align-items: stretch; }
+        }
+        .act-node { flex: 1; min-width: 0; }
+        .act-connector {
+            display: none;
+        }
+        @media (min-width: 640px) {
+            .act-connector {
+                display: block;
+                width: 2.5rem;
+                height: 2px;
+                background: linear-gradient(90deg, rgba(212,175,55,0.25), rgba(212,175,55,0.6));
+                flex-shrink: 0;
+                align-self: center;
+                margin-top: -0.5rem;
+            }
+        }
+        .strategy-flip-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 0.875rem;
+            padding: 1.125rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .strategy-flip-card:hover, .strategy-flip-card.expanded {
+            border-color: var(--gold);
+            background: rgba(212,175,55,0.04);
+        }
+        .strategy-flip-card .card-back {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+        .strategy-flip-card.expanded .card-back { display: block; }
 
-/* ── 3-Act Grid ── */
-.rv-act-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-@media (min-width: 768px) {
-  .rv-act-grid { flex-direction: row; align-items: stretch; }
-}
-.rv-act-card {
-  flex: 1;
-  background: rgba(15,18,25,0.85);
-  border-radius: 12px;
-  padding: 18px;
-  border-top: 3px solid transparent;
-}
-.rv-act-1 { border-top-color: #60a5fa; }
-.rv-act-2 { border-top-color: var(--gold); }
-.rv-act-3 { border-top-color: #4ade80; }
-.rv-act-num { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
-.rv-act-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; }
-.rv-act-facts { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
-.rv-act-facts li { font-size: 0.77rem; color: #cbd5e1; padding-left: 12px; position: relative; line-height: 1.45; }
-.rv-act-facts li::before { content: '–'; position: absolute; left: 0; color: var(--text-muted); }
-.rv-act-connector { display: none; align-items: center; justify-content: center; color: rgba(255,255,255,0.15); font-size: 1.1rem; padding: 0 4px; }
-@media (min-width: 768px) { .rv-act-connector { display: flex; } }
-.rv-act-anchor { font-size: 0.68rem; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 8px; color: var(--text-muted); font-style: italic; }
-.rv-anchor-label { font-style: normal; font-weight: 700; color: var(--gold); margin-right: 4px; }
+        /* Technique Lab */
+        .technique-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 0.875rem;
+            overflow: hidden;
+        }
+        .technique-header {
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.18s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .technique-header:hover { background: rgba(255,255,255,0.035); }
+        .technique-body {
+            display: none;
+            padding: 1.25rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .technique-body.open { display: block; animation: fadeIn 0.22s ease; }
 
-/* ── Theme Cards ── */
-.rv-theme-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-@media (min-width: 640px) { .rv-theme-grid { grid-template-columns: 1fr 1fr; } }
-.rv-theme-card { border-radius: 12px; padding: 18px; border: 1px solid rgba(255,255,255,0.06); }
-.rv-theme-plaintiff { background: rgba(212,175,55,0.05); border-left: 3px solid var(--gold); }
-.rv-theme-defense { background: rgba(56,189,248,0.05); border-left: 3px solid #38bdf8; }
-.rv-theme-side { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 4px; }
-.rv-theme-plaintiff .rv-theme-side { color: var(--gold); }
-.rv-theme-defense .rv-theme-side { color: #38bdf8; }
-.rv-theme-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
-.rv-theme-body { font-size: 0.78rem; color: #cbd5e1; line-height: 1.65; margin-bottom: 12px; }
-.rv-theme-theory { font-size: 0.72rem; color: var(--text-muted); font-style: italic; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 8px; }
-.rv-label { font-style: normal; font-weight: 700; color: var(--gold); margin-right: 4px; }
+        /* Runaway Witness */
+        .rw-choice-btn {
+            touch-action: manipulation;
+            min-height: 52px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 0.625rem;
+            padding: 0.875rem 1rem;
+            width: 100%;
+            text-align: left;
+            font-size: 0.8125rem;
+            transition: border-color 0.18s, background 0.18s;
+            cursor: pointer;
+            background: rgba(255,255,255,0.025);
+            color: var(--text-main);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .rw-choice-btn:hover { border-color: var(--gold); background: rgba(212,175,55,0.06); }
+        .rw-choice-btn:disabled { opacity: 0.45; cursor: default; }
+        .rw-choice-btn.correct { border-color: #22c55e !important; background: rgba(34,197,94,0.08) !important; }
+        .rw-choice-btn.wrong   { border-color: #ef4444 !important; background: rgba(239,68,68,0.08) !important; }
 
-/* ── AURA Detail Cards ── */
-.rv-aura-grid { display: flex; flex-direction: column; gap: 6px; }
-.rv-aura-detail-card {
-  background: rgba(15,18,25,0.8);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.2s;
-}
-.rv-aura-detail-card:hover, .rv-aura-detail-card.open { border-color: rgba(212,175,55,0.3); }
-.rv-aura-detail-header { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
-.rv-aura-big-letter { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--gold); line-height: 1; width: 28px; flex-shrink: 0; }
-.rv-aura-detail-title { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
-.rv-aura-detail-sub { font-size: 0.67rem; color: var(--text-muted); margin-top: 2px; }
-.rv-expand-icon { margin-left: auto; font-size: 1.3rem; color: var(--text-muted); transition: transform 0.2s, color 0.2s; line-height: 1; }
-.rv-aura-detail-card.open .rv-expand-icon { transform: rotate(45deg); color: var(--gold); }
-.rv-aura-detail-body {
-  display: none;
-  padding: 0 18px 16px;
-  font-size: 0.78rem;
-  color: #cbd5e1;
-  line-height: 1.7;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-.rv-aura-detail-card.open .rv-aura-detail-body { display: block; animation: fadeIn 0.2s ease; }
+        /* Fact Lab */
+        .fact-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.625rem;
+            margin-bottom: 0.625rem;
+        }
+        @media (max-width: 639px) {
+            .fact-row { grid-template-columns: 1fr; }
+        }
+        .fact-cell {
+            padding: 0.875rem;
+            border-radius: 0.625rem;
+            font-size: 0.8rem;
+            line-height: 1.55;
+        }
+        .fact-bad {
+            background: rgba(239,68,68,0.06);
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+        .fact-neutral-cell {
+            border: 1px dashed rgba(255,255,255,0.13);
+            background: rgba(255,255,255,0.015);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+            min-height: 80px;
+        }
+        .fact-neutral-cell:hover { border-color: var(--gold); background: rgba(212,175,55,0.05); }
+        .fact-neutral-cell.revealed {
+            cursor: default;
+            background: rgba(34,197,94,0.05);
+            border: 1px solid rgba(34,197,94,0.25);
+            color: var(--text-main);
+            text-align: left;
+            font-style: normal;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
 
-/* ── Primacy/Recency ── */
-.rv-pr-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-@media (min-width: 640px) { .rv-pr-grid { grid-template-columns: 1fr 1fr; } }
-.rv-pr-card { border-radius: 12px; padding: 18px; border: 1px solid rgba(255,255,255,0.07); }
-.rv-pr-primacy { background: rgba(99,102,241,0.07); }
-.rv-pr-recency { background: rgba(34,197,94,0.07); }
-.rv-pr-badge { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; background: rgba(255,255,255,0.07); display: inline-block; padding: 3px 10px; border-radius: 50px; margin-bottom: 6px; }
-.rv-pr-subtitle { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 12px; font-style: italic; }
-.rv-pr-item { display: flex; gap: 8px; align-items: flex-start; font-size: 0.77rem; color: #cbd5e1; margin-bottom: 8px; line-height: 1.45; }
-.rv-pr-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-.plaintiff-dot { background: var(--gold); }
-.defense-dot { background: #38bdf8; }
-.neutral-dot { background: var(--text-muted); }
+        /* Battle Drill Flashcard */
+        .drill-card {
+            perspective: 1000px;
+            height: 180px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .drill-card-inner {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.48s ease;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+        .drill-card.flipped .drill-card-inner { transform: rotateY(180deg); }
+        .drill-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            text-align: center;
+        }
+        .drill-front {
+            background: rgba(20,30,50,0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .drill-back {
+            background: rgba(20,20,10,0.9);
+            border: 1px solid var(--gold);
+            transform: rotateY(180deg);
+        }
+        .drill-option-btn {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 48px;
+            border-radius: 0.5rem;
+            padding: 0.75rem 0.875rem;
+            font-size: 0.775rem;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.025);
+            width: 100%;
+            transition: border-color 0.15s, background 0.15s;
+            cursor: pointer;
+            text-align: left;
+            color: var(--text-main);
+        }
+        .drill-option-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,175,55,0.07); }
+        .drill-option-btn:disabled { opacity: 0.5; cursor: default; }
+        .drill-option-btn.correct { border-color: #22c55e !important; background: rgba(34,197,94,0.1) !important; color: #86efac !important; }
+        .drill-option-btn.wrong   { border-color: #ef4444 !important; background: rgba(239,68,68,0.1) !important; color: #fca5a5 !important; }
 
-/* ── Six Ps ── */
-.rv-sixp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-@media (min-width: 640px) { .rv-sixp-grid { grid-template-columns: repeat(3, 1fr); } }
-.rv-sixp-card { background: rgba(15,18,25,0.85); border-radius: 10px; padding: 14px; border: 1px solid rgba(212,175,55,0.12); }
-.rv-sixp-letter { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; color: rgba(212,175,55,0.3); line-height: 1; margin-bottom: 4px; }
-.rv-sixp-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
-.rv-sixp-body { font-size: 0.73rem; color: #94a3b8; line-height: 1.5; }
+        /* AURA banner */
+        .aura-pill {
+            text-align: center;
+            padding: 0.875rem 0.625rem;
+            background: rgba(0,0,0,0.25);
+            border-radius: 0.625rem;
+        }
 
-/* ── Technique Selector ── */
-.rv-tech-selector { display: flex; gap: 6px; flex-wrap: wrap; }
-.rv-tech-btn {
-  padding: 8px 16px;
-  border-radius: 50px;
-  font-size: 0.73rem;
-  font-weight: 600;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: var(--text-muted);
-  background: transparent;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.2s;
-  min-height: 40px;
-  white-space: nowrap;
-}
-.rv-tech-btn:hover { border-color: rgba(212,175,55,0.5); color: var(--text-main); }
-.rv-tech-btn.active { background: rgba(212,175,55,0.12); border-color: var(--gold); color: var(--gold); }
+        /* Audio/listen lines */
+        .audio-line {
+            padding: 0.625rem 0.875rem;
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            border-left: 3px solid transparent;
+            transition: border-color 0.25s, background 0.25s;
+        }
+        .audio-line.lit {
+            border-left-color: var(--gold);
+            background: rgba(212,175,55,0.06);
+        }
+        .strategy-detect-btn {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+            border: 1px solid rgba(255,255,255,0.13);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.875rem;
+            font-size: 0.675rem;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            cursor: pointer;
+            transition: border-color 0.18s, background 0.18s;
+            background: rgba(255,255,255,0.025);
+            color: var(--text-main);
+        }
+        .strategy-detect-btn:hover { border-color: var(--gold); }
+        .strategy-detect-btn.detected { border-color: #22c55e; background: rgba(34,197,94,0.1); color: #86efac; }
+        .strategy-detect-btn.miss    { border-color: #ef4444; background: rgba(239,68,68,0.1); color: #fca5a5; }
 
-/* ── Technique Panel ── */
-.rv-tech-panel { }
-.rv-tech-definition {
-  font-size: 0.8rem;
-  color: #cbd5e1;
-  line-height: 1.7;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-  border-left: 2px solid var(--gold);
-}
-.rv-tech-when { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
-.rv-tech-example-header { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-.rv-tech-dialog { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
-.rv-dialog-line { display: flex; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 0.78rem; line-height: 1.55; }
-.rv-dialog-q { background: rgba(212,175,55,0.06); border: 1px solid rgba(212,175,55,0.14); }
-.rv-dialog-a { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
-.rv-dialog-role { font-weight: 800; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; flex-shrink: 0; margin-top: 2px; min-width: 14px; }
-.rv-dialog-q .rv-dialog-role { color: var(--gold); }
-.rv-dialog-a .rv-dialog-role { color: #64748b; }
-.rv-loop-highlight { background: rgba(212,175,55,0.2); border-radius: 3px; padding: 1px 5px; font-weight: 600; color: #f1c86e; }
-.rv-technique-note { font-size: 0.7rem; color: #38bdf8; font-style: italic; margin-top: 5px; padding: 5px 8px; background: rgba(56,189,248,0.06); border-left: 2px solid rgba(56,189,248,0.4); border-radius: 3px; }
-.rv-tech-tip { font-size: 0.77rem; color: #4ade80; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 12px; margin-top: 8px; line-height: 1.6; }
-.rv-tech-tip::before { content: 'KEY TIP: '; font-weight: 800; letter-spacing: 0.05em; }
-
-/* ── Listen Feature ── */
-.rv-listen-display {
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px;
-  padding: 14px;
-  min-height: 60px;
-  font-size: 0.82rem;
-  line-height: 1.6;
-}
-.rv-listen-tag {
-  padding: 10px 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: transparent;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.18s;
-  min-height: 44px;
-  width: 100%;
-}
-.rv-listen-tag:hover { border-color: rgba(212,175,55,0.5); color: var(--text-main); }
-.rv-listen-tag.correct-flash { background: rgba(74,222,128,0.15); border-color: #4ade80; color: #4ade80; }
-.rv-listen-tag.wrong-flash { background: rgba(239,68,68,0.15); border-color: #f87171; color: #f87171; }
-
-/* ── Runaway Witness ── */
-.rv-runaway-q { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--gold); line-height: 1.55; min-height: 24px; }
-.rv-runaway-witness { font-size: 0.8rem; color: #94a3b8; line-height: 1.65; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 2px solid rgba(255,255,255,0.15); font-style: italic; margin-bottom: 4px; }
-.rv-runaway-choice {
-  padding: 14px 16px;
-  border: 1px solid rgba(255,255,255,0.11);
-  border-radius: 10px;
-  font-size: 0.8rem;
-  color: var(--text-main);
-  background: rgba(255,255,255,0.03);
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.18s;
-  text-align: left;
-  min-height: 52px;
-  width: 100%;
-}
-.rv-runaway-choice:hover { border-color: rgba(212,175,55,0.5); background: rgba(212,175,55,0.04); }
-.rv-runaway-choice.correct { border-color: #4ade80; background: rgba(74,222,128,0.09); color: #4ade80; }
-.rv-runaway-choice.wrong { border-color: #f87171; background: rgba(239,68,68,0.09); color: #f87171; }
-.rv-runaway-feedback { padding: 14px; border-radius: 10px; font-size: 0.78rem; line-height: 1.6; }
-.rv-runaway-feedback.correct { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); color: #4ade80; }
-.rv-runaway-feedback.wrong { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
-
-/* ── Fact Lab ── */
-.rv-fl-progress-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-.rv-fl-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s ease; }
-.rv-fact-item { border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; transition: border-color 0.3s; }
-.rv-fact-item.neutralized { border-color: rgba(74,222,128,0.25); }
-.rv-fact-header { display: flex; gap: 12px; align-items: flex-start; padding: 16px; background: rgba(15,18,25,0.8); }
-.rv-fact-num { font-size: 0.58rem; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.07); border-radius: 50px; padding: 3px 9px; flex-shrink: 0; margin-top: 3px; letter-spacing: 0.1em; text-transform: uppercase; }
-.rv-bad-fact-text { font-size: 0.83rem; font-weight: 600; color: #fca5a5; line-height: 1.5; flex: 1; }
-.rv-fact-item.neutralized .rv-bad-fact-text { color: #86efac; }
-.rv-fact-context { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; line-height: 1.4; }
-.rv-neutralize-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border: 1px solid rgba(239,68,68,0.35);
-  color: #fca5a5;
-  background: rgba(239,68,68,0.06);
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.2s;
-  min-height: 40px;
-  flex-shrink: 0;
-  align-self: flex-start;
-}
-.rv-neutralize-btn:hover:not(:disabled) { border-color: #fca5a5; background: rgba(239,68,68,0.12); }
-.rv-fact-item.neutralized .rv-neutralize-btn { border-color: rgba(74,222,128,0.35); color: #4ade80; background: rgba(74,222,128,0.06); cursor: default; }
-.rv-neutralizer-panel { display: none; padding: 0 16px 16px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(8,10,14,0.5); }
-.rv-fact-item.neutralized .rv-neutralizer-panel { display: block; animation: fadeIn 0.3s ease; }
-.rv-neutralizer-label { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #4ade80; margin-bottom: 8px; margin-top: 14px; }
-.rv-neutralizer-text { font-size: 0.78rem; color: #cbd5e1; line-height: 1.7; margin-bottom: 10px; }
-.rv-plaintiff-counter { font-size: 0.73rem; color: #f1c86e; background: rgba(212,175,55,0.06); border-left: 2px solid rgba(212,175,55,0.35); border-radius: 4px; padding: 8px 12px; line-height: 1.6; }
-.rv-exhibit-link { font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; font-style: italic; }
-
-/* ── Mode Toggle ── */
-.rv-mode-btn {
-  padding: 10px 22px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: var(--text-muted);
-  background: transparent;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.2s;
-  min-height: 44px;
-}
-.rv-mode-btn:hover { border-color: rgba(212,175,55,0.5); color: var(--text-main); }
-.rv-mode-btn.active { background: rgba(212,175,55,0.1); border-color: var(--gold); color: var(--gold); }
-
-/* ── Battle Drills ── */
-.rv-drill-timer-track { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-.rv-drill-timer-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.1s linear; }
-.rv-drill-option {
-  padding: 14px 14px;
-  border: 1px solid rgba(255,255,255,0.11);
-  border-radius: 10px;
-  font-size: 0.78rem;
-  color: var(--text-main);
-  background: rgba(255,255,255,0.03);
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s;
-  text-align: left;
-  min-height: 56px;
-  width: 100%;
-  line-height: 1.4;
-}
-.rv-drill-option:hover { border-color: rgba(212,175,55,0.4); background: rgba(212,175,55,0.05); }
-.rv-drill-option.correct { border-color: #4ade80; background: rgba(74,222,128,0.1); pointer-events: none; }
-.rv-drill-option.wrong { border-color: #f87171; background: rgba(239,68,68,0.1); pointer-events: none; }
-.rv-drill-option.disabled { opacity: 0.35; pointer-events: none; }
-
-/* ── Mobile Overrides — Review Room ── */
-@media (max-width: 639px) {
-  #rules-vault { padding-bottom: 60px; }
-  .rv-act-grid { flex-direction: column; }
-  .rv-act-connector { display: none; }
-  .rv-sixp-grid { grid-template-columns: 1fr 1fr; }
-  .rv-aura-bar { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
-  .rv-aura-pill { flex-shrink: 0; }
-  .rv-tech-panel { padding: 14px; }
-  .rv-tab { padding: 10px 12px; font-size: 0.68rem; }
-  .rv-drill-option { font-size: 0.74rem; min-height: 52px; }
-  .rv-runaway-choice { min-height: 56px; }
-  .rv-neutralize-btn { padding: 8px 12px; font-size: 0.62rem; }
-}
+        /* Mastery score badge */
+        #rv-mastery-score { font-variant-numeric: tabular-nums; }
     </style>
 </head>
 
@@ -841,14 +722,298 @@
         </section>
 
         <section id="rules-vault" class="section-nav">
-            <div class="glass p-8 rounded-2xl h-[80vh] flex flex-col">
-                <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-                    <h2 class="text-3xl font-bold gold-text">Review</h2>
-                    <input type="text" id="rules-search" placeholder="Search rules..." onkeyup="filterRules()" class="bg-black/30 border border-white/10 rounded-lg px-4 py-2 w-64 text-sm focus:border-gold outline-none text-white">
+
+            <!-- ── Header ── -->
+            <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-bold gold-text leading-none">REVIEW</h2>
+                    <p class="text-[10px] text-muted uppercase tracking-widest mt-1">East Superior Residential Tower · Michigan Mock Trial</p>
                 </div>
-                <div id="rules-list" class="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto pr-2 custom-scrollbar">
-                    </div>
+                <div class="text-right">
+                    <div class="text-[10px] text-muted uppercase tracking-widest">Mastery</div>
+                    <div id="rv-mastery-score" class="text-2xl font-bold gold-text">0%</div>
+                </div>
             </div>
+
+            <!-- ── Tab Bar ── -->
+            <div class="rv-tab-bar mb-0">
+                <button class="rv-tab active" onclick="switchReviewTab('strategy')">Strategy Deck</button>
+                <button class="rv-tab" onclick="switchReviewTab('toolkit')">D/X Toolkit</button>
+                <button class="rv-tab" onclick="switchReviewTab('factlab')">Fact Lab</button>
+                <button class="rv-tab" onclick="switchReviewTab('rules')">Rules Vault</button>
+            </div>
+
+            <!-- ════════════════════════════════════════
+                 PANEL 1 — STRATEGY DECK
+            ════════════════════════════════════════ -->
+            <div id="rv-panel-strategy" class="rv-panel active">
+
+                <!-- AURA Principle -->
+                <div class="glass rounded-xl p-4 mb-6 border-l-4 border-gold">
+                    <div class="text-[10px] font-bold uppercase tracking-widest gold-text mb-3">AURA Principle — Core Navigation</div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="aura-pill">
+                            <div class="text-2xl font-bold gold-text leading-none">A</div>
+                            <div class="text-xs font-bold text-white mt-1">Attention</div>
+                            <div class="text-[10px] text-muted mt-1 leading-relaxed">Capture the jury in your first 90 seconds</div>
+                        </div>
+                        <div class="aura-pill">
+                            <div class="text-2xl font-bold gold-text leading-none">U</div>
+                            <div class="text-xs font-bold text-white mt-1">Understanding</div>
+                            <div class="text-[10px] text-muted mt-1 leading-relaxed">Simplify engineering into a human story</div>
+                        </div>
+                        <div class="aura-pill">
+                            <div class="text-2xl font-bold gold-text leading-none">R</div>
+                            <div class="text-xs font-bold text-white mt-1">Remember</div>
+                            <div class="text-[10px] text-muted mt-1 leading-relaxed">Give them one metaphor they can't forget</div>
+                        </div>
+                        <div class="aura-pill">
+                            <div class="text-2xl font-bold gold-text leading-none">A</div>
+                            <div class="text-xs font-bold text-white mt-1">Accept</div>
+                            <div class="text-[10px] text-muted mt-1 leading-relaxed">Give the jury permission to rule for you</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3-Act Structure Visualizer -->
+                <div class="mb-6">
+                    <div class="text-xs font-bold uppercase tracking-widest text-muted mb-3">3-Act Structure — East Superior Residential Tower</div>
+                    <div class="act-flow">
+                        <div class="act-node">
+                            <div class="glass rounded-xl p-4 border-t-2 border-blue-400 h-full">
+                                <div class="text-[10px] uppercase tracking-widest text-blue-400 font-bold mb-2">ACT I — OPENING</div>
+                                <div class="text-sm font-bold mb-2">The Hook</div>
+                                <div class="text-xs text-muted leading-relaxed mb-3">A building designed to protect 300 families was quietly made dangerous to cut costs. Start here.</div>
+                                <div class="space-y-1">
+                                    <div class="text-[10px] bg-blue-950/30 border border-blue-500/20 rounded px-2 py-1.5">Primacy: Lead with human impact</div>
+                                    <div class="text-[10px] bg-blue-950/30 border border-blue-500/20 rounded px-2 py-1.5">Theme: Safety vs. Profit</div>
+                                    <div class="text-[10px] bg-blue-950/30 border border-blue-500/20 rounded px-2 py-1.5">Introduce Reed Alvarez early</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="act-connector"></div>
+                        <div class="act-node">
+                            <div class="glass rounded-xl p-4 border-t-2 border-gold h-full">
+                                <div class="text-[10px] uppercase tracking-widest gold-text font-bold mb-2">ACT II — EVIDENCE</div>
+                                <div class="text-sm font-bold mb-2">The Build</div>
+                                <div class="text-xs text-muted leading-relaxed mb-3">Layer engineering facts from affidavits, then detonate them with the whistleblower memo.</div>
+                                <div class="space-y-1">
+                                    <div class="text-[10px] bg-yellow-950/30 border border-yellow-600/20 rounded px-2 py-1.5">Dr. Hightower: The technical proof</div>
+                                    <div class="text-[10px] bg-yellow-950/30 border border-yellow-600/20 rounded px-2 py-1.5">Dr. Chen: Academic credibility</div>
+                                    <div class="text-[10px] bg-yellow-950/30 border border-yellow-600/20 rounded px-2 py-1.5">Exhibit 1: The smoking gun</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="act-connector"></div>
+                        <div class="act-node">
+                            <div class="glass rounded-xl p-4 border-t-2 border-green-500 h-full">
+                                <div class="text-[10px] uppercase tracking-widest text-green-400 font-bold mb-2">ACT III — CLOSING</div>
+                                <div class="text-sm font-bold mb-2">The Verdict</div>
+                                <div class="text-xs text-muted leading-relaxed mb-3">Recency: End with $22.6M and the families who lived in fear. Return to the opening theme.</div>
+                                <div class="space-y-1">
+                                    <div class="text-[10px] bg-green-950/30 border border-green-500/20 rounded px-2 py-1.5">Recency: End on the emotional anchor</div>
+                                    <div class="text-[10px] bg-green-950/30 border border-green-500/20 rounded px-2 py-1.5">Call to action: Hold them accountable</div>
+                                    <div class="text-[10px] bg-green-950/30 border border-green-500/20 rounded px-2 py-1.5">Echo your opening theme exactly</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategy Cards: Theme & Theory, Primacy/Recency, Six Ps -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    <div class="strategy-flip-card" onclick="toggleStrategyCard(this)">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-[10px] text-muted uppercase tracking-widest mb-0.5">Module A</div>
+                                <div class="text-sm font-bold">Theme &amp; Theory</div>
+                            </div>
+                            <div class="gold-text text-base flex-shrink-0">▸</div>
+                        </div>
+                        <div class="card-back">
+                            <div class="text-xs text-muted leading-relaxed space-y-2">
+                                <p><span class="text-white font-semibold">Theme</span> = A single moral sentence the jury remembers. <em class="gold-text">"They chose profit over people."</em></p>
+                                <p><span class="text-white font-semibold">Theory</span> = Your factual narrative of exactly what happened. It must explain every piece of evidence without contradiction.</p>
+                                <div class="border-t border-white/10 pt-2">
+                                    <span class="gold-text font-bold text-[10px] uppercase block mb-1">This Case:</span>
+                                    <span>Theme = Cost-cutting destroyed safety. Theory = Apex approved the bolt substitution knowing it failed quartering wind specs; Metro executed it for schedule bonuses.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="strategy-flip-card" onclick="toggleStrategyCard(this)">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-[10px] text-muted uppercase tracking-widest mb-0.5">Module B</div>
+                                <div class="text-sm font-bold">Primacy / Recency</div>
+                            </div>
+                            <div class="gold-text text-base flex-shrink-0">▸</div>
+                        </div>
+                        <div class="card-back">
+                            <div class="text-xs text-muted leading-relaxed space-y-2">
+                                <p><span class="text-white font-semibold">Primacy</span> = Jurors remember what they hear first. Lead with your strongest, most emotional point in every examination.</p>
+                                <p><span class="text-white font-semibold">Recency</span> = Jurors remember what they hear last. End every direct and cross on a high note — never bury your best point in the middle.</p>
+                                <div class="border-t border-white/10 pt-2">
+                                    <span class="gold-text font-bold text-[10px] uppercase block mb-1">Application:</span>
+                                    Open Dr. Hightower's direct with "a ticking clock." Close cross of Cam Martinez with "you received a personal bonus for finishing early."
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="strategy-flip-card" onclick="toggleStrategyCard(this)">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-[10px] text-muted uppercase tracking-widest mb-0.5">Module C</div>
+                                <div class="text-sm font-bold">The Six P's</div>
+                            </div>
+                            <div class="gold-text text-base flex-shrink-0">▸</div>
+                        </div>
+                        <div class="card-back">
+                            <div class="grid grid-cols-2 gap-1.5 text-xs">
+                                <div class="bg-black/20 rounded p-2"><span class="gold-text font-bold">Prepare</span><br><span class="text-muted text-[10px]">Know every affidavit line cold.</span></div>
+                                <div class="bg-black/20 rounded p-2"><span class="gold-text font-bold">Practice</span><br><span class="text-muted text-[10px]">Drill questions aloud with a partner.</span></div>
+                                <div class="bg-black/20 rounded p-2"><span class="gold-text font-bold">Plan</span><br><span class="text-muted text-[10px]">Map your chapter structure in advance.</span></div>
+                                <div class="bg-black/20 rounded p-2"><span class="gold-text font-bold">Pivot</span><br><span class="text-muted text-[10px]">Adapt when a witness evades.</span></div>
+                                <div class="bg-black/20 rounded p-2"><span class="gold-text font-bold">Plant</span><br><span class="text-muted text-[10px]">Leave key facts in the jury's mind.</span></div>
+                                <div class="bg-black/20 rounded p-2"><span class="gold-text font-bold">Perform</span><br><span class="text-muted text-[10px]">Control your tone, pace, and body.</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Listen to Strategy -->
+                <div class="glass rounded-xl p-5">
+                    <div class="flex justify-between items-center mb-4 gap-3 flex-wrap">
+                        <div>
+                            <div class="text-sm font-bold">Listen to Strategy</div>
+                            <div class="text-xs text-muted mt-0.5">An examination plays out line by line. Identify which technique is being used.</div>
+                        </div>
+                        <button id="rv-audio-btn" onclick="startListenToStrategy()" class="btn-primary px-5 py-2 rounded-lg text-xs font-bold flex-shrink-0" style="touch-action:manipulation;">PLAY</button>
+                    </div>
+                    <div id="rv-audio-feed" class="space-y-1 hidden mb-3"></div>
+                    <div id="rv-audio-detect" class="hidden">
+                        <div class="text-[10px] text-muted mb-2 uppercase tracking-widest font-bold">What technique just occurred?</div>
+                        <div id="rv-audio-btns" class="flex flex-wrap gap-2"></div>
+                        <div id="rv-audio-feedback" class="mt-3 text-xs hidden p-3 rounded-lg leading-relaxed"></div>
+                    </div>
+                    <div id="rv-audio-score" class="hidden text-xs text-muted border-t border-white/10 pt-3 mt-2"></div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════
+                 PANEL 2 — D/X TOOLKIT
+            ════════════════════════════════════════ -->
+            <div id="rv-panel-toolkit" class="rv-panel">
+                <div class="glass rounded-xl p-4 border-l-4 mb-5" style="border-color:#38bdf8">
+                    <div class="text-[10px] uppercase tracking-widest font-bold mb-1" style="color:#38bdf8">Technique Laboratory</div>
+                    <div class="text-xs text-muted leading-relaxed">Each technique is illustrated with a real witness from the East Superior Tower case. Tap a card to expand the full case example and coaching tip.</div>
+                </div>
+
+                <div class="space-y-3 mb-8" id="rv-technique-cards">
+                    <!-- Populated by buildTechniqueCards() in Engine.js -->
+                </div>
+
+                <!-- Runaway Witness Simulator -->
+                <div class="glass rounded-xl p-5" style="border: 1px solid rgba(251,146,60,0.3);">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="text-xl flex-shrink-0 mt-0.5">⚠</div>
+                        <div>
+                            <div class="text-sm font-bold">Runaway Witness Simulator</div>
+                            <div class="text-xs text-muted mt-0.5">Apply the <span class="text-white font-semibold">Ask → Repeat → Repeat</span> technique to control an evasive witness. Choose your response at each step.</div>
+                        </div>
+                    </div>
+                    <div id="rv-rw-container">
+                        <button onclick="startRunawayWitness()" class="btn-primary px-6 py-3 rounded-lg text-sm font-bold w-full" style="touch-action:manipulation;">START SIMULATION</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════
+                 PANEL 3 — FACT LAB
+            ════════════════════════════════════════ -->
+            <div id="rv-panel-factlab" class="rv-panel">
+                <div class="glass rounded-xl p-4 border-l-4 border-purple-500 mb-5">
+                    <div class="text-[10px] uppercase tracking-widest text-purple-400 font-bold mb-1">Two-Column Method — Active Recall</div>
+                    <div class="text-xs text-muted leading-relaxed">The left column lists indisputable bad facts from this case. Tap the right column to reveal how to neutralize each one. This is the core of case preparation.</div>
+                </div>
+
+                <div class="hidden sm:grid grid-cols-2 gap-2 mb-2 px-1">
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-red-400">Bad Fact (Indisputable)</div>
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-green-400">Neutralization — Tap to Reveal</div>
+                </div>
+
+                <div id="rv-factlab-rows">
+                    <!-- Populated by buildFactLab() -->
+                </div>
+
+                <div class="mt-4 flex justify-between items-center text-xs">
+                    <div class="text-muted"><span id="rv-factlab-revealed" class="text-white font-bold">0</span> of <span id="rv-factlab-total" class="text-white font-bold">0</span> facts neutralized</div>
+                    <button onclick="resetFactLab()" class="text-muted underline" style="touch-action:manipulation; background:none; border:none; cursor:pointer;">Reset</button>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════
+                 PANEL 4 — RULES VAULT
+            ════════════════════════════════════════ -->
+            <div id="rv-panel-rules" class="rv-panel">
+                <!-- Search + Toggle -->
+                <div class="flex gap-2 mb-5 flex-wrap">
+                    <input type="text" id="rules-search" placeholder="Search rules, keywords, tips..." onkeyup="filterRules()" class="flex-grow bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm focus:border-gold outline-none text-white" style="min-width:0;">
+                    <button onclick="switchDrillMode()" id="rv-drill-toggle" class="btn-outline px-4 py-2 rounded-lg text-[10px] font-bold flex-shrink-0 uppercase tracking-widest" style="touch-action:manipulation;">Battle Drills</button>
+                </div>
+
+                <!-- Browse View -->
+                <div id="rv-rules-browse">
+                    <div id="rules-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Populated by initRulesVault() -->
+                    </div>
+                </div>
+
+                <!-- Battle Drill View (hidden by default) -->
+                <div id="rv-battle-drill" class="hidden">
+                    <div class="flex items-start justify-between mb-5 gap-3">
+                        <div>
+                            <div class="text-sm font-bold">Battle Drills</div>
+                            <div class="text-xs text-muted mt-0.5">Read the scenario. Identify the violated rule instantly. Tap the card to reveal the answer.</div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-[10px] text-muted uppercase tracking-widest">Score</div>
+                            <div id="rv-drill-score" class="text-xl font-bold gold-text">0 / 0</div>
+                        </div>
+                    </div>
+
+                    <!-- Flip Card -->
+                    <div id="rv-drill-card" class="drill-card mb-5" onclick="flipDrillCard()" title="Tap to reveal answer">
+                        <div class="drill-card-inner">
+                            <div class="drill-face drill-front">
+                                <div id="rv-drill-scenario" class="text-xs sm:text-sm leading-relaxed text-white/90"></div>
+                            </div>
+                            <div class="drill-face drill-back">
+                                <div>
+                                    <div class="text-2xl font-bold gold-text leading-none" id="rv-drill-rule-num"></div>
+                                    <div class="text-sm font-semibold mt-1 text-white" id="rv-drill-rule-name"></div>
+                                    <div class="text-[10px] text-muted mt-2 leading-relaxed" id="rv-drill-rule-why"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Answer Options -->
+                    <div id="rv-drill-options" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4"></div>
+
+                    <!-- Feedback -->
+                    <div id="rv-drill-feedback" class="hidden p-3 rounded-lg mb-4 text-xs leading-relaxed"></div>
+
+                    <!-- Progress + Next -->
+                    <div class="flex justify-between items-center">
+                        <div class="text-xs text-muted">Card <span id="rv-drill-progress">1</span> of <span id="rv-drill-total">0</span></div>
+                        <button id="rv-drill-next" onclick="nextBattleDrill()" class="btn-primary px-5 py-2 rounded-lg text-xs font-bold hidden" style="touch-action:manipulation;">NEXT CARD →</button>
+                    </div>
+                </div>
+            </div>
+
         </section>
 
         <section id="witness-room" class="section-nav">
