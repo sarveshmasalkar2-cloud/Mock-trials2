@@ -3,29 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Quantum Legal Lab</title>
-    <script>
-        (function() {
-            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (isMobile) {
-                // Check if running in Google Apps Script
-                if (window.location.host.indexOf('script.googleusercontent.com') > -1 || window.location.host.indexOf('script.google.com') > -1) {
-                    // Check query parameters specifically, ignoring hash
-                    if (window.location.search.indexOf('page=mobile') === -1) {
-                        var newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?page=mobile';
-                        // Replace location to avoid history stack issues
-                        window.location.replace(newUrl);
-                    }
-                } else {
-                    // Fallback for local/other hosting
-                    if (window.location.pathname.indexOf('mobilesupport.html') === -1) {
-                        window.location.replace("mobilesupport.html");
-                    }
-                }
-            }
-        })();
-    </script>
+    <!-- Unified responsive layout — no mobile redirect needed -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap"
@@ -216,19 +196,79 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.92);
             z-index: 1000;
             justify-content: center;
-            align-items: center;
+            align-items: flex-end; /* sheet slides up from bottom on mobile */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (min-width: 640px) {
+            #objection-overlay {
+                align-items: center;
+            }
         }
 
         .objection-card {
             background: #111827;
             border: 1px solid var(--gold);
-            padding: 2rem;
-            border-radius: 1rem;
-            max-width: 600px;
-            width: 90%;
+            border-radius: 1.25rem 1.25rem 0 0;
+            padding: 1.5rem 1.25rem 2.5rem;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            pointer-events: auto;
+        }
+
+        @media (min-width: 640px) {
+            .objection-card {
+                border-radius: 1rem;
+                max-width: 600px;
+                width: 90%;
+                padding: 2rem;
+                max-height: 80vh;
+            }
+        }
+
+        /* Touch-safe interactive elements */
+        button, [onclick], .card {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+        }
+
+        .objection-rule-btn {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(212,175,55,0.15);
+            pointer-events: auto;
+            cursor: pointer;
+            width: 100%;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.875rem 1rem;
+            border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 0.625rem;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-main);
+            font-size: 0.875rem;
+            text-align: left;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .objection-rule-btn:active,
+        .objection-rule-btn:focus {
+            background: rgba(212,175,55,0.12);
+            border-color: var(--gold);
+            outline: none;
+        }
+
+        /* Body-level touch improvement */
+        body {
+            touch-action: pan-y;
         }
 
         .hint-bar {
@@ -241,10 +281,94 @@
             padding: 1rem;
             z-index: 100;
         }
+
+        /* ── Mobile layout overrides ── */
+        @media (max-width: 639px) {
+            body { padding: 1rem; }
+
+            .objection-btn {
+                width: 100%;
+                padding: 1.25rem;
+                font-size: 1.25rem;
+                border-radius: 0.75rem;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* Dashboard cards go full-width horizontal strips on mobile */
+            #dashboard .grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            #dashboard .glass.p-8 {
+                padding: 1.25rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                border-top-width: 0;
+                border-left-width: 4px;
+                text-align: left;
+            }
+
+            #dashboard .glass.p-8 .text-5xl {
+                font-size: 2rem;
+                flex-shrink: 0;
+            }
+
+            #dashboard .glass.p-8 .text-muted.text-sm.leading-relaxed {
+                display: none; /* hide long desc on mobile, show title + button */
+            }
+
+            #dashboard .glass.p-8 button {
+                display: none; /* the whole card is tappable; button is redundant on mobile */
+            }
+
+            /* Flow step cards go full-width stacked */
+            .flex.flex-col.md\\:flex-row.gap-8 {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .glass.p-12 {
+                padding: 1.25rem;
+            }
+
+            /* Chat rooms */
+            #wit-chat-room, #law-chat-room, #obj-sim-room {
+                height: calc(100dvh - 140px);
+            }
+
+            /* Input row */
+            #wit-chat-room .flex.gap-2, #law-chat-room .flex.gap-2 {
+                gap: 0.5rem;
+            }
+
+            /* Mic + stop btn smaller on mobile */
+            #wit-mic-btn, #law-mic-btn,
+            #wit-stop-btn, #law-stop-btn {
+                padding: 0.75rem;
+                font-size: 1rem;
+            }
+
+            #wit-chat-room button[onclick="handleWitSend()"],
+            #law-chat-room button[onclick="handleLawSend()"] {
+                padding: 0.75rem 1.25rem;
+                font-size: 0.875rem;
+            }
+
+            /* Progress bar thicker for visibility */
+            .progress-bar { height: 6px; }
+
+            /* Rules vault full height scroll */
+            #rules-vault .glass {
+                height: calc(100dvh - 160px);
+            }
+        }
     </style>
 </head>
 
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8" style="touch-action: pan-y;">
 
     <header class="flex justify-between items-center mb-12 max-w-7xl mx-auto">
         <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('dashboard')">
@@ -464,17 +588,17 @@
             <div id="obj-flow-1" class="obj-step active">
                 <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch mt-24">
                     <div onclick="startObjectionSim('easy')"
-                        class="glass p-12 rounded-2xl card border-b-8 border-green-500 w-full md:w-80 text-center">
+                        class="glass p-12 rounded-2xl card border-b-8 border-green-500 w-full md:w-80 text-center" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
                         <h3 class="text-3xl font-bold mb-4">EASY</h3>
                         <p class="text-muted text-sm">Explicit Violations</p>
                     </div>
                     <div onclick="startObjectionSim('medium')"
-                        class="glass p-12 rounded-2xl card border-b-8 border-yellow-500 w-full md:w-80 text-center">
+                        class="glass p-12 rounded-2xl card border-b-8 border-yellow-500 w-full md:w-80 text-center" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
                         <h3 class="text-3xl font-bold mb-4">MEDIUM</h3>
                         <p class="text-muted text-sm">Mixed Complexity</p>
                     </div>
                     <div onclick="startObjectionSim('hard')"
-                        class="glass p-12 rounded-2xl card border-b-8 border-red-500 w-full md:w-80 text-center">
+                        class="glass p-12 rounded-2xl card border-b-8 border-red-500 w-full md:w-80 text-center" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
                         <h3 class="text-3xl font-bold mb-4">HARD</h3>
                         <p class="text-muted text-sm">Subtle Impeachment</p>
                     </div>
@@ -502,7 +626,11 @@
                     </div>
 
                 <div class="mt-8 flex flex-col items-center">
-                    <button onclick="handleObjectionClick()" class="objection-btn">OBJECTION!</button>
+                    <button 
+                        onclick="handleObjectionClick()" 
+                        ontouchend="if(event.cancelable){event.preventDefault();handleObjectionClick();}"
+                        class="objection-btn" 
+                        style="touch-action:manipulation; -webkit-tap-highlight-color:transparent; min-width:200px; user-select:none;">OBJECTION!</button>
                     <div class="mt-4 text-xs text-muted uppercase tracking-widest">Observe Carefully</div>
                 </div>
 
@@ -516,11 +644,16 @@
 
     <div id="objection-overlay">
         <div class="objection-card glass overflow-hidden">
-            <h2 class="text-2xl font-bold mb-6 gold-text border-b border-white/10 pb-4">State Grounds for Objection</h2>
-            <div id="objection-options" class="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
-                </div>
-            <div class="mt-8 flex justify-end">
-                <button onclick="closeObjectionMenu()" class="text-muted hover:text-white mr-6">Cancel</button>
+            <!-- drag handle visual for mobile bottom-sheet feel -->
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4 sm:hidden"></div>
+            <h2 class="text-xl sm:text-2xl font-bold mb-1 gold-text">State Your Grounds</h2>
+            <p class="text-xs text-muted mb-5 uppercase tracking-widest">Select the rule being violated</p>
+            <div id="objection-options" class="flex flex-col gap-2 overflow-y-auto" style="max-height: 55vh; -webkit-overflow-scrolling: touch;">
+            </div>
+            <div class="mt-5 pt-4 border-t border-white/10">
+                <button id="obj-cancel-btn" class="w-full py-3 rounded-lg border border-white/20 text-muted text-sm font-semibold tracking-wider hover:text-white hover:border-white/40 transition-colors" style="touch-action: manipulation; min-height: 48px;">
+                    CANCEL
+                </button>
             </div>
         </div>
     </div>
@@ -528,6 +661,69 @@
 <script>
     let activeRecognition = null;
     let finalTranscript = ''; // This stores your previous sentences
+
+    // ── Touch / pointer fix for the objection overlay ──────────────────────
+    // We monkey-patch handleObjectionClick AFTER Engine.js runs so that the
+    // dynamically-created rule buttons get both onclick AND touchstart,
+    // and use the new .objection-rule-btn class for proper sizing.
+    window.addEventListener('DOMContentLoaded', () => {
+        // Wire cancel button
+        const cancelBtn = document.getElementById('obj-cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeObjectionMenu);
+            cancelBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                closeObjectionMenu();
+            });
+        }
+
+        // Patch handleObjectionClick to produce touch-safe buttons
+        const _origHandleObjectionClick = window.handleObjectionClick;
+        window.handleObjectionClick = function() {
+            // Pause the sim timer (same as original)
+            clearTimeout(State.objection.interval);
+            logAction("OBJECTION CLICKED");
+
+            const overlay = document.getElementById('objection-overlay');
+            const options = document.getElementById('objection-options');
+            options.innerHTML = '';
+
+            const rules = window.MockTrialRulesData || [];
+            rules.forEach(rule => {
+                const btn = document.createElement('button');
+                btn.className = 'objection-rule-btn';
+                btn.innerHTML = `
+                    <span class="font-mono text-xs uppercase tracking-wider" style="color:var(--gold); flex-shrink:0;">Rule ${rule.rule}</span>
+                    <span style="color:#e2e8f0; font-weight:600;">${rule.name}</span>
+                `;
+
+                // Both click and touchend — touchend fires before click on iOS and prevents 300ms delay
+                const fire = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    submitObjection(rule.rule);
+                };
+                btn.addEventListener('click', fire);
+                btn.addEventListener('touchend', fire);
+
+                options.appendChild(btn);
+            });
+
+            overlay.style.display = 'flex';
+        };
+
+        // Also fix closeObjectionMenu to be touch-safe
+        const overlay = document.getElementById('objection-overlay');
+        if (overlay) {
+            overlay.addEventListener('touchend', (e) => {
+                // Tap the dark backdrop (not the card) to dismiss
+                if (e.target === overlay) {
+                    e.preventDefault();
+                    closeObjectionMenu();
+                }
+            });
+        }
+    });
 
     function toggleVoice(inputId, micBtnId, stopBtnId) {
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
