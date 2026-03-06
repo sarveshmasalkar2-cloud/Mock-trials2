@@ -644,6 +644,183 @@
 
         /* Mastery score badge */
         #rv-mastery-score { font-variant-numeric: tabular-nums; }
+        .obj-family-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+  .obj-family-btn {
+    flex: 1 1 120px;
+    min-height: 64px;
+    border-radius: 0.875rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 2px solid transparent;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    user-select: none;
+  }
+  .obj-family-btn:active { transform: scale(0.96); }
+  .obj-family-btn.active { border-color: currentColor; box-shadow: 0 0 20px currentColor; }
+  .obj-family-btn.fam-form     { background: rgba(56,189,248,0.12);  color: #38bdf8; }
+  .obj-family-btn.fam-witness  { background: rgba(167,139,250,0.12); color: #a78bfa; }
+  .obj-family-btn.fam-evidence { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+  .obj-family-btn.fam-hearsay  { background: rgba(239,68,68,0.12);   color: #ef4444; }
+  .obj-family-btn.fam-form.active     { background: rgba(56,189,248,0.22); }
+  .obj-family-btn.fam-witness.active  { background: rgba(167,139,250,0.22); }
+  .obj-family-btn.fam-evidence.active { background: rgba(251,191,36,0.22); }
+  .obj-family-btn.fam-hearsay.active  { background: rgba(239,68,68,0.22); }
+
+  /* ── RULE CARDS ─────────────────────────────────────────────── */
+  .obj-rule-card {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 0.875rem;
+    overflow: hidden;
+    margin-bottom: 0.625rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.18s, background 0.18s;
+  }
+  .obj-rule-card:hover, .obj-rule-card.open {
+    border-color: rgba(212,175,55,0.5);
+    background: rgba(212,175,55,0.04);
+  }
+  .obj-rule-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+  }
+  .obj-rule-badge {
+    font-size: 0.6rem;
+    font-weight: 800;
+    font-family: monospace;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    flex-shrink: 0;
+    min-width: 52px;
+    text-align: center;
+  }
+  .obj-rule-body {
+    display: none;
+    padding: 0 1rem 1rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .obj-rule-card.open .obj-rule-body { display: block; animation: fadeIn 0.22s ease; }
+  .obj-jargon {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(212,175,55,0.08);
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--gold);
+    margin-top: 0.75rem;
+  }
+  .obj-exception-tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.3);
+    color: #86efac;
+    margin: 0.2rem 0.2rem 0 0;
+  }
+
+  /* ── MASTERY BAR ─────────────────────────────────────────────── */
+  .obj-mastery-track {
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 99px;
+    overflow: hidden;
+    margin: 0.625rem 0;
+  }
+  .obj-mastery-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #22c55e, #86efac);
+    width: 0%;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* ── PASSIVE LEARNING POPUP ──────────────────────────────────── */
+  #obj-passive-popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2000;
+    width: min(480px, 92vw);
+    background: #0f172a;
+    border: 2px solid var(--gold);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    box-shadow: 0 0 60px rgba(212,175,55,0.25);
+    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes popIn {
+    from { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+    to   { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+  }
+  #obj-passive-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1999;
+  }
+
+  /* ── BATTLE DRILL — 3-SECOND TIMER ──────────────────────────── */
+  .obj-drill-countdown {
+    font-size: 3rem;
+    font-weight: 900;
+    font-family: 'Playfair Display', serif;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+  .obj-drill-countdown.urgent { color: #ef4444; animation: pulse-red 0.5s infinite; }
+
+  /* ── PASSIVE LEARNING SCRIPT LINES ──────────────────────────── */
+  .passive-line {
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    border-left: 3px solid transparent;
+    transition: border-color 0.3s, background 0.3s;
+    margin-bottom: 0.375rem;
+  }
+  .passive-line.speaking {
+    border-left-color: var(--gold);
+    background: rgba(212,175,55,0.07);
+  }
+  .passive-line.violation-line {
+    border-left-color: #ef4444;
+    background: rgba(239,68,68,0.07);
+  }
+  .passive-line.violation-line.speaking {
+    border-left-color: #ef4444;
+    background: rgba(239,68,68,0.15);
+  }
+
+  /* ── OBJ STEP CLASSES ────────────────────────────────────────── */
+  .obj-step { display: none; }
+  .obj-step.active { display: block; animation: fadeIn 0.4s ease; }
     </style>
 </head>
 
@@ -1147,61 +1324,281 @@
             </div>
         </section>
 
-        <section id="objection-room" class="section-nav">
-            <div id="obj-flow-1" class="obj-step active">
-                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch mt-24">
-                    <div onclick="startObjectionSim('easy')"
-                        class="glass p-12 rounded-2xl card border-b-8 border-green-500 w-full md:w-80 text-center" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
-                        <h3 class="text-3xl font-bold mb-4">EASY</h3>
-                        <p class="text-muted text-sm">Explicit Violations</p>
-                    </div>
-                    <div onclick="startObjectionSim('medium')"
-                        class="glass p-12 rounded-2xl card border-b-8 border-yellow-500 w-full md:w-80 text-center" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
-                        <h3 class="text-3xl font-bold mb-4">MEDIUM</h3>
-                        <p class="text-muted text-sm">Mixed Complexity</p>
-                    </div>
-                    <div onclick="startObjectionSim('hard')"
-                        class="glass p-12 rounded-2xl card border-b-8 border-red-500 w-full md:w-80 text-center" style="touch-action:manipulation; -webkit-tap-highlight-color:transparent;">
-                        <h3 class="text-3xl font-bold mb-4">HARD</h3>
-                        <p class="text-muted text-sm">Subtle Impeachment</p>
-                    </div>
-                </div>
-                <div class="mt-8 flex items-center justify-center gap-4">
-                    <label class="flex items-center cursor-pointer">
-                        <div class="relative">
-                            <input type="checkbox" id="pressure-mode-toggle" class="sr-only peer">
-                            <div class="w-10 h-6 bg-gray-700 rounded-full shadow-inner peer-checked:bg-red-600 transition-colors"></div>
-                            <div class="dot absolute w-4 h-4 bg-white rounded-full shadow left-1 top-1 peer-checked:translate-x-4 transition-transform"></div>
-                        </div>
-                        <div class="ml-3 text-sm font-medium text-gray-300 uppercase tracking-wider">Pressure Mode</div>
-                    </label>
-                </div>
-            </div>
+       
+<section id="objection-room" class="section-nav">
 
-            <div id="obj-countdown" class="obj-step hidden h-[60vh] flex flex-col justify-center items-center">
-                <h2 id="countdown-text" class="text-[12rem] font-bold gold-text leading-none">3</h2>
-                <p class="text-muted tracking-[1em] uppercase mt-4">Simulation Calibrating</p>
-            </div>
+  <!-- ── STEP 1: MODE SELECT ──────────────────────────────────── -->
+  <div id="obj-flow-1" class="obj-step active">
+    <div class="text-center mb-8 mt-8">
+      <h2 class="text-4xl font-bold mb-2">⚡ Objection Room</h2>
+      <p class="text-muted text-sm">Psychological mastery through Active Recall + Dual Coding</p>
+    </div>
 
-            <div id="obj-sim-room" class="obj-step hidden h-[70vh] flex flex-col relative">
-                <div class="glass flex-grow rounded-2xl p-8 overflow-y-auto font-serif text-lg leading-relaxed relative scroll-hide"
-                    id="obj-sim-display">
-                    </div>
+    <!-- Mastery Bar -->
+    <div class="glass rounded-xl p-4 mb-6 max-w-2xl mx-auto">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs font-bold uppercase tracking-widest gold-text">Mastery Progress</span>
+        <span class="text-xs text-muted" id="obj-mastery-label">0 / 10 Rules Mastered</span>
+      </div>
+      <div class="obj-mastery-track">
+        <div class="obj-mastery-fill" id="obj-mastery-fill"></div>
+      </div>
+      <div class="flex justify-between mt-1">
+        <span class="text-[10px] text-muted">Consecutive Sustained: <span id="obj-streak" class="gold-text font-bold">0</span></span>
+        <span class="text-[10px] text-muted">All-Time Correct: <span id="obj-alltime" class="gold-text font-bold">0</span></span>
+      </div>
+    </div>
 
-                <div class="mt-8 flex flex-col items-center">
-                    <button 
-                        onclick="handleObjectionClick()" 
-                        ontouchend="if(event.cancelable){event.preventDefault();handleObjectionClick();}"
-                        class="objection-btn" 
-                        style="touch-action:manipulation; -webkit-tap-highlight-color:transparent; min-width:200px; user-select:none;">OBJECTION!</button>
-                    <div class="mt-4 text-xs text-muted uppercase tracking-widest">Observe Carefully</div>
-                </div>
+    <!-- 4 Mode Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-6">
+      
+      <div onclick="initObjRuleLibrary()"
+           class="glass p-6 rounded-2xl card border-b-4 border-blue-400 text-center"
+           style="touch-action:manipulation;">
+        <div class="text-4xl mb-3">📚</div>
+        <h3 class="text-lg font-bold mb-1 text-blue-400">RULE LIBRARY</h3>
+        <p class="text-muted text-xs leading-relaxed">Study all rules by family with Jargon Crusher translations</p>
+      </div>
 
-                <div class="progress-bar mt-4">
-                    <div id="obj-progress" class="progress-inner"></div>
-                </div>
-            </div>
-        </section>
+      <div onclick="initPassiveLearning()"
+           class="glass p-6 rounded-2xl card border-b-4 border-purple-400 text-center"
+           style="touch-action:manipulation;">
+        <div class="text-4xl mb-3">🎧</div>
+        <h3 class="text-lg font-bold mb-1 text-purple-400">PASSIVE LEARNING</h3>
+        <p class="text-muted text-xs leading-relaxed">Watch &amp; listen — auto-objections from the East Superior case</p>
+      </div>
+
+      <div onclick="initBattleDrillObjRoom()"
+           class="glass p-6 rounded-2xl card border-b-4 border-yellow-400 text-center"
+           style="touch-action:manipulation;">
+        <div class="text-4xl mb-3">⚔️</div>
+        <h3 class="text-lg font-bold mb-1 text-yellow-400">BATTLE DRILLS</h3>
+        <p class="text-muted text-xs leading-relaxed">10 East Superior scenarios — object in under 3 seconds</p>
+      </div>
+
+      <div onclick="startObjectionSim('medium')"
+           class="glass p-6 rounded-2xl card border-b-4 border-red-500 text-center"
+           style="touch-action:manipulation;">
+        <div class="text-4xl mb-3">🔴</div>
+        <h3 class="text-lg font-bold mb-1 text-red-400">LIVE SIM</h3>
+        <p class="text-muted text-xs leading-relaxed">Real-time scripted trial — object at violations</p>
+        <!-- Pressure toggle inside card -->
+        <label class="flex items-center justify-center gap-2 mt-3 cursor-pointer" onclick="event.stopPropagation()">
+          <div class="relative">
+            <input type="checkbox" id="pressure-mode-toggle" class="sr-only peer">
+            <div class="w-8 h-5 bg-gray-700 rounded-full shadow-inner peer-checked:bg-red-600 transition-colors"></div>
+            <div class="dot absolute w-3 h-3 bg-white rounded-full shadow left-1 top-1 peer-checked:translate-x-3 transition-transform"></div>
+          </div>
+          <span class="text-[10px] text-gray-400 uppercase tracking-wider">Pressure Mode</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: RULE LIBRARY ──────────────────────────────────── -->
+  <div id="obj-rule-library" class="obj-step">
+    <div class="max-w-3xl mx-auto mt-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">Rule Library</h3>
+        <button onclick="showObjStep('obj-flow-1')" class="text-xs text-muted hover:text-gold transition-colors" style="touch-action:manipulation;">← BACK</button>
+      </div>
+
+      <!-- Family Tabs -->
+      <div class="obj-family-bar">
+        <button class="obj-family-btn fam-form active" id="fam-btn-form"
+                onclick="switchObjFamily('form')" style="touch-action:manipulation;">
+          <span class="text-lg">📝</span>
+          <span>THE FORM</span>
+          <span class="text-[9px] opacity-70">Leading · Compound</span>
+        </button>
+        <button class="obj-family-btn fam-witness" id="fam-btn-witness"
+                onclick="switchObjFamily('witness')" style="touch-action:manipulation;">
+          <span class="text-lg">👁️</span>
+          <span>THE WITNESS</span>
+          <span class="text-[9px] opacity-70">Knowledge · Opinion</span>
+        </button>
+        <button class="obj-family-btn fam-evidence" id="fam-btn-evidence"
+                onclick="switchObjFamily('evidence')" style="touch-action:manipulation;">
+          <span class="text-lg">⚖️</span>
+          <span>THE EVIDENCE</span>
+          <span class="text-[9px] opacity-70">Relevance · Prejudice</span>
+        </button>
+        <button class="obj-family-btn fam-hearsay" id="fam-btn-hearsay"
+                onclick="switchObjFamily('hearsay')" style="touch-action:manipulation;">
+          <span class="text-lg">🔴</span>
+          <span>THE HEARSAY</span>
+          <span class="text-[9px] opacity-70">Statements · Exceptions</span>
+        </button>
+      </div>
+
+      <!-- Rule Cards Container -->
+      <div id="obj-family-panel" class="overflow-y-auto" style="max-height: calc(100dvh - 300px);"></div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: PASSIVE LEARNING ──────────────────────────────── -->
+  <div id="obj-passive-room" class="obj-step">
+    <div class="max-w-2xl mx-auto mt-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="text-xl font-bold">🎧 Passive Learning Mode</h3>
+          <p class="text-xs text-muted mt-0.5">The East Superior trial plays out. Watch violations auto-flag in real time.</p>
+        </div>
+        <button onclick="stopPassiveLearning();showObjStep('obj-flow-1')"
+                class="text-xs text-muted hover:text-gold transition-colors flex-shrink-0" style="touch-action:manipulation;">← BACK</button>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex gap-3 mb-4 flex-wrap">
+        <button id="obj-passive-play-btn" onclick="startPassiveLearning()"
+                class="btn-primary px-5 py-2.5 rounded-lg text-sm font-bold flex-shrink-0"
+                style="touch-action:manipulation;">▶ PLAY</button>
+        <button id="obj-passive-pause-btn" onclick="togglePassivePause()"
+                class="btn-outline px-5 py-2.5 rounded-lg text-sm font-bold hidden"
+                style="touch-action:manipulation;">⏸ PAUSE</button>
+        <div class="flex items-center gap-2 ml-auto">
+          <span class="text-xs text-muted">Speed:</span>
+          <input type="range" id="obj-passive-speed" min="0.5" max="1.8" step="0.1" value="0.9"
+                 class="w-20 accent-yellow-400" oninput="updatePassiveSpeed(this.value)">
+          <span class="text-xs text-muted" id="obj-passive-speed-label">0.9×</span>
+        </div>
+      </div>
+
+      <!-- Script Feed -->
+      <div class="glass rounded-xl p-4 overflow-y-auto scroll-hide" id="obj-passive-feed"
+           style="min-height: 280px; max-height: calc(100dvh - 380px);">
+        <div class="text-muted text-sm text-center pt-8">Press PLAY to begin the East Superior cross-examination...</div>
+      </div>
+
+      <!-- Violation counter -->
+      <div class="flex gap-4 mt-3 justify-center text-xs text-muted">
+        <span>Violations auto-flagged: <span id="obj-passive-vcount" class="gold-text font-bold">0</span></span>
+        <span>·</span>
+        <span>Scene: <span id="obj-passive-scene" class="text-white">—</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: BATTLE DRILLS ──────────────────────────────────── -->
+  <div id="obj-battle-drill-room" class="obj-step">
+    <div class="max-w-2xl mx-auto mt-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="text-xl font-bold">⚔️ Battle Drills</h3>
+          <p class="text-xs text-muted mt-0.5">East Superior scenarios · Object before time runs out</p>
+        </div>
+        <button onclick="stopBattleDrillTimer();showObjStep('obj-flow-1')"
+                class="text-xs text-muted hover:text-gold transition-colors" style="touch-action:manipulation;">← BACK</button>
+      </div>
+
+      <!-- Mastery bar at top -->
+      <div class="flex justify-between items-center text-xs mb-1 text-muted">
+        <span>Drill <span id="obj-drill-num">1</span> / <span id="obj-drill-total">10</span></span>
+        <span>Score: <span id="obj-drill-score" class="gold-text font-bold">0</span></span>
+        <span>Streak: <span id="obj-drill-streak" class="text-green-400 font-bold">0</span>🔥</span>
+      </div>
+      <div class="obj-mastery-track mb-4">
+        <div class="obj-mastery-fill" id="obj-drill-mastery-fill"></div>
+      </div>
+
+      <!-- Scenario card -->
+      <div class="glass rounded-2xl p-6 mb-4" id="obj-drill-scenario-box">
+        <div class="text-[10px] uppercase tracking-widest text-muted mb-2">East Superior · Live Testimony</div>
+        <div class="text-sm leading-relaxed font-serif" id="obj-drill-scenario-text">Loading...</div>
+      </div>
+
+      <!-- 3-second countdown ring -->
+      <div class="flex flex-col items-center mb-4">
+        <div class="obj-drill-countdown gold-text" id="obj-drill-timer">3</div>
+        <div class="progress-bar w-full mt-1" style="height:6px;">
+          <div class="progress-inner bg-red-500" id="obj-drill-timer-bar" style="transition: width 1s linear;"></div>
+        </div>
+      </div>
+
+      <!-- Objection buttons — rule families -->
+      <div class="grid grid-cols-2 gap-3 mb-4" id="obj-drill-buttons">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Feedback -->
+      <div id="obj-drill-feedback" class="hidden rounded-xl p-4 text-sm mb-4"></div>
+
+      <!-- Next -->
+      <button id="obj-drill-next" onclick="nextBattleDrillObjRoom()"
+              class="btn-primary w-full py-3 rounded-xl text-sm font-bold hidden"
+              style="touch-action:manipulation;">NEXT DRILL →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 5: COUNTDOWN ──────────────────────────────────────── -->
+  <div id="obj-countdown" class="obj-step h-[60vh] flex flex-col justify-center items-center">
+    <h2 id="countdown-text" class="text-[12rem] font-bold gold-text leading-none">3</h2>
+    <p class="text-muted tracking-[1em] uppercase mt-4">Simulation Calibrating</p>
+  </div>
+
+  <!-- ── STEP 6: LIVE SIM ───────────────────────────────────────── -->
+  <div id="obj-sim-room" class="obj-step" style="min-height: 70vh; display: none; flex-direction: column;">
+    <div class="flex justify-between items-center mb-3">
+      <div>
+        <span class="text-xs text-muted uppercase tracking-widest">Live Sim · East Superior</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-muted">Streak: <span id="obj-sim-streak" class="text-green-400 font-bold">0</span>🔥</span>
+        <button onclick="navigateTo('objection-room');initObjectionRoom()"
+                class="text-xs text-muted hover:text-gold" style="touch-action:manipulation;">✕ EXIT</button>
+      </div>
+    </div>
+
+    <!-- Consecutive Sustained Mastery Bar -->
+    <div class="obj-mastery-track mb-2">
+      <div class="obj-mastery-fill" id="obj-sim-mastery-fill"></div>
+    </div>
+    <div class="text-[10px] text-muted mb-3 text-center">
+      Consecutive Sustained: <span id="obj-sim-mastery-label" class="gold-text font-bold">0 / 10</span>
+    </div>
+
+    <div class="glass flex-grow rounded-2xl p-6 overflow-y-auto font-serif text-base leading-relaxed relative scroll-hide"
+         id="obj-sim-display" style="flex-grow: 1;">
+    </div>
+
+    <div class="mt-6 flex flex-col items-center">
+      <button
+        onclick="handleObjectionClick()"
+        ontouchend="if(event.cancelable){event.preventDefault();handleObjectionClick();}"
+        class="objection-btn"
+        style="touch-action:manipulation; -webkit-tap-highlight-color:transparent; min-width:200px; user-select:none;">
+        OBJECTION!
+      </button>
+      <div class="mt-3 text-xs text-muted uppercase tracking-widest">Spot the Violation · Object Fast</div>
+    </div>
+
+    <div class="progress-bar mt-4">
+      <div id="obj-progress" class="progress-inner"></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ── PASSIVE LEARNING POPUP (outside section, fixed overlay) ──────── -->
+<div id="obj-passive-backdrop"></div>
+<div id="obj-passive-popup">
+  <div class="flex justify-between items-start mb-3">
+    <div>
+      <div class="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-1">⚠️ VIOLATION DETECTED</div>
+      <div class="gold-text font-bold text-lg" id="obj-popup-rule">Rule 802 — Hearsay</div>
+    </div>
+    <button onclick="closePassivePopup()" class="text-muted hover:text-white text-xl leading-none" style="touch-action:manipulation;">✕</button>
+  </div>
+  <div class="obj-jargon" id="obj-popup-jargon">"They didn't say it in court"</div>
+  <p class="text-xs text-muted leading-relaxed mb-3" id="obj-popup-explain"></p>
+  <div class="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">The Line That Violated It:</div>
+  <div class="bg-black/30 rounded-lg p-3 border-l-2 border-red-400 text-xs italic text-white/80 mb-3" id="obj-popup-line"></div>
+  <div id="obj-popup-exceptions" class="mb-3 hidden">
+    <div class="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-1">⚡ Exceptions to Know:</div>
+    <div id="obj-popup-exceptions-list" class="flex flex-wrap gap-1"></div>
+  </div>
+  <button onclick="closePassivePopup()" class="btn-primary w-full py-2.5 rounded-lg text-sm font-bold" style="touch-action:manipulation;">GOT IT — CONTINUE</button>
+</div>
 
     </main>
 
