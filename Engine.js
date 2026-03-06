@@ -2012,178 +2012,119 @@ const PASSIVE_SCRIPT = [
     { speaker: 'JUDGE', text: 'Sustained. Counsel, please ask a question.', violation: false }
 ];
 
-let _passiveState = { idx: 0, paused: false, timeout: null, speed: 0.9, vcount: 0, speaking: false };
+// ═══════════════════════════════════════════════════════════════════════
+//  PASSIVE LEARNING — RULE FLASHCARDS WITH TEXT-TO-SPEECH
+// ═══════════════════════════════════════════════════════════════════════
+
+let _flashcardState = { 
+    flashcards: [],
+    current: 0,
+    learned: new Set(),
+    speaking: false
+};
 
 function initPassiveLearning() {
     showObjStep('obj-passive-room');
-    _passiveState = { idx: 0, paused: false, timeout: null, speed: 0.9, vcount: 0, speaking: false };
-    document.getElementById('obj-passive-feed').innerHTML = '<div class="text-muted text-sm text-center pt-8">Press PLAY to begin the East Superior cross-examination...</div>';
-    document.getElementById('obj-passive-vcount').textContent = '0';
-    document.getElementById('obj-passive-scene').textContent = '—';
-    const playBtn = document.getElementById('obj-passive-play-btn');
-    const pauseBtn = document.getElementById('obj-passive-pause-btn');
-    if (playBtn)  { playBtn.classList.remove('hidden');  playBtn.disabled = false; }
-    if (pauseBtn) pauseBtn.classList.add('hidden');
-    logAction("Passive Learning Ready");
+    
+    // Build flashcards from OBJ_RULE_FAMILIES
+    _flashcardState.flashcards = [];
+    OBJ_RULE_FAMILIES.forEach(family => {
+        family.rules.forEach(rule => {
+            _flashcardState.flashcards.push({
+                ...rule,
+                family: family.label,
+                familyColor: family.color
+            });
+        });
+    });
+    
+    _flashcardState.current = 0;
+    _flashcardState.learned.clear();
+    
+    document.getElementById('obj-flashcard-total').textContent = _flashcardState.flashcards.length;
+    displayFlashcard();
+    logAction("Passive Learning (Flashcards) Ready");
 }
 
-function startPassiveLearning() {
-    const playBtn  = document.getElementById('obj-passive-play-btn');
-    const pauseBtn = document.getElementById('obj-passive-pause-btn');
-    if (playBtn)  playBtn.classList.add('hidden');
-    if (pauseBtn) pauseBtn.classList.remove('hidden');
+function displayFlashcard() {
+    const flashcard = _flashcardState.flashcards[_flashcardState.current];
+    if (!flashcard) return;
 
-    const feed = document.getElementById('obj-passive-feed');
-    feed.innerHTML = '';
-    _passiveState.idx = 0;
-    _passiveState.paused = false;
-    _passiveState.vcount = 0;
+    // Update progress
+    document.getElementById('obj-flashcard-num').textContent = _flashcardState.current + 1;
+    document.getElementById('obj-flashcard-learned').textContent = _flashcardState.learned.size;
+    const fillPct = (_flashcardState.current / _flashcardState.flashcards.length) * 100;
+    document.getElementById('obj-flashcard-mastery-fill').style.width = fillPct + '%';
 
-    _passivePlayLine();
-    logAction("Passive Learning Started");
-}
+    // Update card content
+    document.getElementById('obj-flashcard-family').textContent = flashcard.family;
+    document.getElementById('obj-flashcard-rule').textContent = 'Rule ' + flashcard.rule;
+    document.getElementById('obj-flashcard-name').textContent = flashcard.name;
+    document.getElementById('obj-flashcard-jargon').textContent = flashcard.jargon;
+    document.getElementById('obj-flashcard-full').textContent = flashcard.full;
+    document.getElementById('obj-flashcard-example').textContent = flashcard.example;
+    document.getElementById('obj-flashcard-tip').textContent = flashcard.tip;
 
-function _passivePlayLine() {
-    if (_passiveState.paused) return;
-    if (_passiveState.idx >= PASSIVE_SCRIPT.length) {
-        _passiveEnd();
-        return;
-    }
-
-    const line = PASSIVE_SCRIPT[_passiveState.idx];
-    const feed = document.getElementById('obj-passive-feed');
-
-    // Add line element
-    const div = document.createElement('div');
-    div.className = `passive-line ${line.violation ? 'violation-line' : ''}`;
-    div.id = `passive-line-${_passiveState.idx}`;
-
-    const speakerColor = line.speaker.includes('COUNSEL') ? 'color:var(--gold)' :
-                         line.speaker.includes('JUDGE')   ? 'color:#a78bfa' :
-                         line.speaker.includes('Defense') ? 'color:#38bdf8' : 'color:#f8fafc';
-    div.innerHTML = `<span class="text-[10px] font-bold uppercase tracking-wider" style="${speakerColor}">${line.speaker}: </span><span class="text-white/90">${line.text}</span>`;
-    if (line.violation) {
-        div.innerHTML += ` <span class="ml-2 text-[9px] bg-red-900/40 border border-red-500/30 text-red-300 font-bold px-1.5 py-0.5 rounded">⚠️ VIOLATION</span>`;
-    }
-    feed.appendChild(div);
-    feed.scrollTop = feed.scrollHeight;
-
-    // Highlight current line
-    div.classList.add('speaking');
-    setTimeout(() => div.classList.remove('speaking'), 1200);
-
-    // TTS
-    const msg = new SpeechSynthesisUtterance(`${line.speaker}: ${line.text}`);
-    msg.rate = _passiveState.speed;
-    msg.pitch = line.speaker.includes('REED') || line.speaker.includes('WHITLEY') ? 0.95 :
-                line.speaker.includes('DR.') ? 1.05 : 1.0;
-    window.speechSynthesis.cancel();
-
-    msg.onend = () => {
-        if (_passiveState.paused) return;
-        if (line.violation) {
-            _passiveState.vcount++;
-            document.getElementById('obj-passive-vcount').textContent = _passiveState.vcount;
-            // Show popup after a brief pause
-            _passiveState.timeout = setTimeout(() => {
-                showPassivePopup(line);
-            }, 400);
+    // Update mark button text
+    const markBtn = document.getElementById('obj-flashcard-mark');
+    if (markBtn) {
+        if (_flashcardState.learned.has(_flashcardState.current)) {
+            markBtn.textContent = '✓ MARKED LEARNED';
+            markBtn.classList.add('opacity-50');
         } else {
-            _passiveState.idx++;
-            _passiveState.timeout = setTimeout(_passivePlayLine, 300);
+            markBtn.textContent = '✓ MARK LEARNED';
+            markBtn.classList.remove('opacity-50');
         }
-    };
-
-    // Scene label
-    document.getElementById('obj-passive-scene').textContent =
-        _passiveState.idx < 12 ? 'Direct: Alvarez' :
-        _passiveState.idx < 22 ? 'Cross: Hightower' :
-        _passiveState.idx < 28 ? 'Direct: Forrester' : 'Cross: Martinez';
-
-    window.speechSynthesis.speak(msg);
+    }
 }
 
-function showPassivePopup(line) {
-    document.getElementById('obj-popup-rule').textContent    = `Rule ${line.ruleNum} — ${line.ruleName}`;
-    document.getElementById('obj-popup-jargon').textContent  = line.jargon;
-    document.getElementById('obj-popup-explain').textContent = line.explain;
-    document.getElementById('obj-popup-line').textContent    = line.text;
+function speakFlashcard() {
+    const flashcard = _flashcardState.flashcards[_flashcardState.current];
+    if (!flashcard) return;
 
-    // Exceptions from rule data
-    const allRules = OBJ_RULE_FAMILIES.flatMap(f => f.rules);
-    const ruleData = allRules.find(r => r.rule === line.ruleNum);
-    const excContainer = document.getElementById('obj-popup-exceptions');
-    const excList = document.getElementById('obj-popup-exceptions-list');
-    if (ruleData && ruleData.exceptions.length > 0) {
-        excList.innerHTML = ruleData.exceptions.map(e => `<span class="obj-exception-tag">${e}</span>`).join('');
-        excContainer.classList.remove('hidden');
-    } else {
-        excContainer.classList.add('hidden');
-    }
-
-    document.getElementById('obj-passive-backdrop').style.display = 'block';
-    document.getElementById('obj-passive-popup').style.display = 'block';
-
-    // Speak the rule explanation
     window.speechSynthesis.cancel();
-    const explain = new SpeechSynthesisUtterance(`Violation detected. Rule ${line.ruleNum}: ${line.ruleName}. ${line.explain}`);
-    explain.rate = 0.85;
-    window.speechSynthesis.speak(explain);
+    
+    const text = `Rule ${flashcard.rule}. ${flashcard.name}. ${flashcard.jargon}. ${flashcard.full}`;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    
+    window.speechSynthesis.speak(utterance);
+    _flashcardState.speaking = true;
 }
 
-function closePassivePopup() {
-    document.getElementById('obj-passive-backdrop').style.display = 'none';
-    document.getElementById('obj-passive-popup').style.display = 'none';
-    window.speechSynthesis.cancel();
-    _passiveState.idx++;
-    if (!_passiveState.paused) {
-        _passiveState.timeout = setTimeout(_passivePlayLine, 400);
+function nextFlashcard() {
+    if (_flashcardState.current < _flashcardState.flashcards.length - 1) {
+        _flashcardState.current++;
+        window.speechSynthesis.cancel();
+        displayFlashcard();
     }
 }
 
-function togglePassivePause() {
-    const btn = document.getElementById('obj-passive-pause-btn');
-    _passiveState.paused = !_passiveState.paused;
-    if (_passiveState.paused) {
-        window.speechSynthesis.pause();
-        clearTimeout(_passiveState.timeout);
-        if (btn) btn.textContent = '▶ RESUME';
+function prevFlashcard() {
+    if (_flashcardState.current > 0) {
+        _flashcardState.current--;
+        window.speechSynthesis.cancel();
+        displayFlashcard();
+    }
+}
+
+function markFlashcardLearned() {
+    if (_flashcardState.learned.has(_flashcardState.current)) {
+        _flashcardState.learned.delete(_flashcardState.current);
     } else {
-        window.speechSynthesis.resume();
-        if (btn) btn.textContent = '⏸ PAUSE';
-        _passivePlayLine();
+        _flashcardState.learned.add(_flashcardState.current);
     }
-}
-
-function updatePassiveSpeed(val) {
-    _passiveState.speed = parseFloat(val);
-    const label = document.getElementById('obj-passive-speed-label');
-    if (label) label.textContent = parseFloat(val).toFixed(1) + '×';
+    displayFlashcard();
 }
 
 function stopPassiveLearning() {
     window.speechSynthesis.cancel();
-    clearTimeout(_passiveState.timeout);
-    _passiveState.paused = true;
-}
-
-function _passiveEnd() {
-    const feed = document.getElementById('obj-passive-feed');
-    const div = document.createElement('div');
-    div.className = 'mt-4 p-4 rounded-xl border border-green-500/30 bg-green-950/20 text-center';
-    div.innerHTML = `<div class="text-green-400 font-bold mb-1">Session Complete</div>
-        <div class="text-xs text-muted">You spotted ${_passiveState.vcount} auto-flagged violations. Go to Battle Drills to test yourself!</div>`;
-    feed.appendChild(div);
-
-    const pauseBtn = document.getElementById('obj-passive-pause-btn');
-    const playBtn  = document.getElementById('obj-passive-play-btn');
-    if (pauseBtn) pauseBtn.classList.add('hidden');
-    if (playBtn)  { playBtn.textContent = '↺ REPLAY'; playBtn.classList.remove('hidden'); playBtn.onclick = startPassiveLearning; }
-    logAction("Passive Learning Complete");
+    _flashcardState.speaking = false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  BATTLE DRILLS — 10 East Superior Scenarios, 3-Second Timer
+//  BATTLE DRILLS — 10 East Superior Scenarios, 6-Second Timer
 // ═══════════════════════════════════════════════════════════════════════
 const OBJ_BATTLE_DRILLS = [
     {
@@ -2365,21 +2306,21 @@ function _loadObjDrill() {
 }
 
 function _startDrillTimer(drill) {
-    _objDrillState.timeLeft = 3;
+    _objDrillState.timeLeft = 6;
     const timerEl = document.getElementById('obj-drill-timer');
     const barEl   = document.getElementById('obj-drill-timer-bar');
 
-    if (timerEl) { timerEl.textContent = '3'; timerEl.classList.remove('urgent'); }
+    if (timerEl) { timerEl.textContent = '6'; timerEl.classList.remove('urgent'); }
     if (barEl)   barEl.style.width = '100%';
 
     _objDrillState.timerInterval = setInterval(() => {
         _objDrillState.timeLeft--;
         if (timerEl) {
             timerEl.textContent = _objDrillState.timeLeft;
-            if (_objDrillState.timeLeft <= 1) timerEl.classList.add('urgent');
+            if (_objDrillState.timeLeft <= 2) timerEl.classList.add('urgent');
             else timerEl.classList.remove('urgent');
         }
-        if (barEl) barEl.style.width = ((_objDrillState.timeLeft / 3) * 100) + '%';
+        if (barEl) barEl.style.width = ((_objDrillState.timeLeft / 6) * 100) + '%';
 
         if (_objDrillState.timeLeft <= 0) {
             stopBattleDrillTimer();

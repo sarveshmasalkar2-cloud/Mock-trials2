@@ -1365,7 +1365,7 @@
            style="touch-action:manipulation;">
         <div class="text-4xl mb-3">🎧</div>
         <h3 class="text-lg font-bold mb-1 text-purple-400">PASSIVE LEARNING</h3>
-        <p class="text-muted text-xs leading-relaxed">Watch &amp; listen — auto-objections from the East Superior case</p>
+        <p class="text-muted text-xs leading-relaxed">Study rules with flashcards — audio guide reads each rule aloud</p>
       </div>
 
       <div onclick="initBattleDrillObjRoom()"
@@ -1373,24 +1373,7 @@
            style="touch-action:manipulation;">
         <div class="text-4xl mb-3">⚔️</div>
         <h3 class="text-lg font-bold mb-1 text-yellow-400">BATTLE DRILLS</h3>
-        <p class="text-muted text-xs leading-relaxed">10 East Superior scenarios — object in under 3 seconds</p>
-      </div>
-
-      <div onclick="startObjectionSim('medium')"
-           class="glass p-6 rounded-2xl card border-b-4 border-red-500 text-center"
-           style="touch-action:manipulation;">
-        <div class="text-4xl mb-3">🔴</div>
-        <h3 class="text-lg font-bold mb-1 text-red-400">LIVE SIM</h3>
-        <p class="text-muted text-xs leading-relaxed">Real-time scripted trial — object at violations</p>
-        <!-- Pressure toggle inside card -->
-        <label class="flex items-center justify-center gap-2 mt-3 cursor-pointer" onclick="event.stopPropagation()">
-          <div class="relative">
-            <input type="checkbox" id="pressure-mode-toggle" class="sr-only peer">
-            <div class="w-8 h-5 bg-gray-700 rounded-full shadow-inner peer-checked:bg-red-600 transition-colors"></div>
-            <div class="dot absolute w-3 h-3 bg-white rounded-full shadow left-1 top-1 peer-checked:translate-x-3 transition-transform"></div>
-          </div>
-          <span class="text-[10px] text-gray-400 uppercase tracking-wider">Pressure Mode</span>
-        </label>
+        <p class="text-muted text-xs leading-relaxed">10 East Superior scenarios — object before time runs out</p>
       </div>
     </div>
   </div>
@@ -1436,45 +1419,70 @@
     </div>
   </div>
 
-  <!-- ── STEP 3: PASSIVE LEARNING ──────────────────────────────── -->
+  <!-- ── STEP 3: PASSIVE LEARNING (FLASHCARDS) ──────────────────── -->
   <div id="obj-passive-room" class="obj-step">
-    <div class="max-w-2xl mx-auto mt-6">
+    <div class="max-w-3xl mx-auto mt-6">
       <div class="flex justify-between items-center mb-4">
         <div>
-          <h3 class="text-xl font-bold">🎧 Passive Learning Mode</h3>
-          <p class="text-xs text-muted mt-0.5">The East Superior trial plays out. Watch violations auto-flag in real time.</p>
+          <h3 class="text-xl font-bold">🎧 Passive Learning — Rule Flashcards</h3>
+          <p class="text-xs text-muted mt-0.5">Study all rules with text-to-speech audio guide</p>
         </div>
         <button onclick="stopPassiveLearning();showObjStep('obj-flow-1')"
                 class="text-xs text-muted hover:text-gold transition-colors flex-shrink-0" style="touch-action:manipulation;">← BACK</button>
       </div>
 
-      <!-- Controls -->
-      <div class="flex gap-3 mb-4 flex-wrap">
-        <button id="obj-passive-play-btn" onclick="startPassiveLearning()"
-                class="btn-primary px-5 py-2.5 rounded-lg text-sm font-bold flex-shrink-0"
-                style="touch-action:manipulation;">▶ PLAY</button>
-        <button id="obj-passive-pause-btn" onclick="togglePassivePause()"
-                class="btn-outline px-5 py-2.5 rounded-lg text-sm font-bold hidden"
-                style="touch-action:manipulation;">⏸ PAUSE</button>
-        <div class="flex items-center gap-2 ml-auto">
-          <span class="text-xs text-muted">Speed:</span>
-          <input type="range" id="obj-passive-speed" min="0.5" max="1.8" step="0.1" value="0.9"
-                 class="w-20 accent-yellow-400" oninput="updatePassiveSpeed(this.value)">
-          <span class="text-xs text-muted" id="obj-passive-speed-label">0.9×</span>
+      <!-- Progress bar -->
+      <div class="flex justify-between items-center text-xs mb-2 text-muted">
+        <span>Rule <span id="obj-flashcard-num">1</span> / <span id="obj-flashcard-total">32</span></span>
+        <span>Learned: <span id="obj-flashcard-learned" class="gold-text font-bold">0</span></span>
+      </div>
+      <div class="obj-mastery-track mb-6">
+        <div class="obj-mastery-fill" id="obj-flashcard-mastery-fill"></div>
+      </div>
+
+      <!-- Flashcard -->
+      <div class="glass rounded-2xl p-8 mb-6 min-h-[350px] flex flex-col justify-between" id="obj-flashcard-container">
+        <div>
+          <div class="text-[11px] uppercase tracking-widest text-muted font-bold mb-3" id="obj-flashcard-family">Family</div>
+          <div class="gold-text font-mono text-2xl font-bold mb-2" id="obj-flashcard-rule">Rule 611(a)</div>
+          <h2 class="text-3xl font-bold mb-2" id="obj-flashcard-name">Argumentative</h2>
+          <div class="text-sm italic text-yellow-300 mb-4" id="obj-flashcard-jargon">"You're fighting, not asking questions."</div>
+          
+          <div class="bg-black/30 rounded-lg p-4 mb-4 border-l-2 border-gold">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Full Definition:</div>
+            <p class="text-sm text-white leading-relaxed" id="obj-flashcard-full"></p>
+          </div>
+
+          <div class="bg-black/30 rounded-lg p-4 border-l-2 border-blue-400">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-blue-300 mb-2">Example:</div>
+            <p class="text-xs text-white/80 italic" id="obj-flashcard-example"></p>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-white/10">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-2">💡 Pro Tip:</div>
+          <p class="text-xs text-white/70 leading-relaxed" id="obj-flashcard-tip"></p>
         </div>
       </div>
 
-      <!-- Script Feed -->
-      <div class="glass rounded-xl p-4 overflow-y-auto scroll-hide" id="obj-passive-feed"
-           style="min-height: 280px; max-height: calc(100dvh - 380px);">
-        <div class="text-muted text-sm text-center pt-8">Press PLAY to begin the East Superior cross-examination...</div>
+      <!-- Controls -->
+      <div class="flex gap-3 mb-4 flex-wrap justify-center">
+        <button id="obj-flashcard-speak" onclick="speakFlashcard()"
+                class="btn-primary px-5 py-2.5 rounded-lg text-sm font-bold flex-shrink-0"
+                style="touch-action:manipulation;">🔊 READ ALOUD</button>
+        <button id="obj-flashcard-mark" onclick="markFlashcardLearned()"
+                class="btn-outline px-5 py-2.5 rounded-lg text-sm font-bold flex-shrink-0"
+                style="touch-action:manipulation;">✓ MARK LEARNED</button>
       </div>
 
-      <!-- Violation counter -->
-      <div class="flex gap-4 mt-3 justify-center text-xs text-muted">
-        <span>Violations auto-flagged: <span id="obj-passive-vcount" class="gold-text font-bold">0</span></span>
-        <span>·</span>
-        <span>Scene: <span id="obj-passive-scene" class="text-white">—</span></span>
+      <!-- Navigation -->
+      <div class="flex gap-2 justify-center">
+        <button onclick="prevFlashcard()"
+                class="btn-outline px-6 py-2.5 rounded-lg text-sm font-bold"
+                style="touch-action:manipulation;">← PREV</button>
+        <button onclick="nextFlashcard()"
+                class="btn-primary px-6 py-2.5 rounded-lg text-sm font-bold"
+                style="touch-action:manipulation;">NEXT →</button>
       </div>
     </div>
   </div>
@@ -1534,47 +1542,6 @@
   <div id="obj-countdown" class="obj-step h-[60vh] flex flex-col justify-center items-center">
     <h2 id="countdown-text" class="text-[12rem] font-bold gold-text leading-none">3</h2>
     <p class="text-muted tracking-[1em] uppercase mt-4">Simulation Calibrating</p>
-  </div>
-
-  <!-- ── STEP 6: LIVE SIM ───────────────────────────────────────── -->
-  <div id="obj-sim-room" class="obj-step" style="min-height: 70vh; display: none; flex-direction: column;">
-    <div class="flex justify-between items-center mb-3">
-      <div>
-        <span class="text-xs text-muted uppercase tracking-widest">Live Sim · East Superior</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-muted">Streak: <span id="obj-sim-streak" class="text-green-400 font-bold">0</span>🔥</span>
-        <button onclick="navigateTo('objection-room');initObjectionRoom()"
-                class="text-xs text-muted hover:text-gold" style="touch-action:manipulation;">✕ EXIT</button>
-      </div>
-    </div>
-
-    <!-- Consecutive Sustained Mastery Bar -->
-    <div class="obj-mastery-track mb-2">
-      <div class="obj-mastery-fill" id="obj-sim-mastery-fill"></div>
-    </div>
-    <div class="text-[10px] text-muted mb-3 text-center">
-      Consecutive Sustained: <span id="obj-sim-mastery-label" class="gold-text font-bold">0 / 10</span>
-    </div>
-
-    <div class="glass flex-grow rounded-2xl p-6 overflow-y-auto font-serif text-base leading-relaxed relative scroll-hide"
-         id="obj-sim-display" style="flex-grow: 1;">
-    </div>
-
-    <div class="mt-6 flex flex-col items-center">
-      <button
-        onclick="handleObjectionClick()"
-        ontouchend="if(event.cancelable){event.preventDefault();handleObjectionClick();}"
-        class="objection-btn"
-        style="touch-action:manipulation; -webkit-tap-highlight-color:transparent; min-width:200px; user-select:none;">
-        OBJECTION!
-      </button>
-      <div class="mt-3 text-xs text-muted uppercase tracking-widest">Spot the Violation · Object Fast</div>
-    </div>
-
-    <div class="progress-bar mt-4">
-      <div id="obj-progress" class="progress-inner"></div>
-    </div>
   </div>
 
 </section>
